@@ -23,6 +23,7 @@ All test users, opportunities, saves, claims, and payouts below were inserted wi
 | Draft save / draft claim | Rejected with SQLSTATE `42501` |
 | Claim submission | `started` to `submitted`; database set both timestamps |
 | Cross-user claims/payouts | User B sees zero |
+| Deleting an Auth user | Minimal account, saved IDs, and claims cascade to zero |
 | Public source columns | `name` readable; `trust_score` denied |
 
 Example transaction pattern (replace UUIDs with test values in a development environment):
