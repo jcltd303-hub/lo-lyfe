@@ -73,6 +73,13 @@ export default function AccountPage() {
     setMessage('Claim marked submitted.');
   }
 
+  async function updateStatus(claimId: string, status: 'pending' | 'paid' | 'rejected') {
+    const response = await fetch('/api/claims', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ claimId, status }) });
+    if (!response.ok) { setMessage('Could not update claim status.'); return; }
+    setClaims(current => current.map(item => item.id === claimId ? { ...item, status } : item));
+    setMessage(`Claim marked ${status}.`);
+  }
+
   async function deleteAccount() {
     if (!userId || deleteText !== 'DELETE MY ACCOUNT') return;
     const id = userId;
@@ -106,6 +113,8 @@ export default function AccountPage() {
           <h3>{opportunity?.title ?? 'Opportunity'}</h3>
           <p>Status: {claim.status}</p>
           {opportunity?.claim_url && <a href={opportunity.claim_url} target="_blank" rel="noopener noreferrer">Review and apply at the official site ↗</a>}
+          {claim.status === 'submitted' && <button type="button" onClick={() => void updateStatus(claim.id, 'pending')}>Mark pending</button>}
+          {claim.status === 'pending' && <div><button type="button" onClick={() => void updateStatus(claim.id, 'paid')}>Mark paid</button><button type="button" onClick={() => void updateStatus(claim.id, 'rejected')}>Mark rejected</button></div>}
           {claim.status === 'started' && <div>
             <label><input type="checkbox" checked={attested.includes(claim.id)}
               onChange={event => setAttested(current => event.target.checked ? [...current, claim.id] : current.filter(id => id !== claim.id))} />
