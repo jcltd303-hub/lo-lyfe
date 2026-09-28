@@ -15,17 +15,38 @@ export default function AccountPage() {
 
   useEffect(() => {
     let active = true;
-    void Promise.resolve().then(() => createClient().auth.getUser()).then(({ data: { user }, error }) => {
-        if (!active) return;
-        setUserId(error ? null : user?.id ?? null);
-        setMessage(error || !user ? 'Sign in to access your account.' : '');
-        if (user && !error) {
-          void fetch('/api/claims', { cache: 'no-store' }).then(response => response.json())
-            .then(result => { if (active) setClaims(result.items ?? []); })
-            .catch(() => { if (active) setMessage('Could not load claim history.'); });
-        }
-      }).catch(() => { if (active) setMessage('Account is unavailable.'); });
-    return () => { active = false; };
+    let generation = 0;
+    const client = createClient();
+    const { data: { subscription } } = client.auth.onAuthStateChange((_event, session) => {
+      if (!active) return;
+      const current = ++generation;
+      // Remove the previous account's claims before any asynchronous work.
+      setUserId(null);
+      setClaims([]);
+      setAttested([]);
+      setDeleteText('');
+      setMessage(session?.user ? 'Checking account…' : 'Sign in to access your account.');
+      if (!session?.user) return;
+      const id = session.user.id;
+      setTimeout(() => {
+        if (!active || current !== generation) return;
+        void client.auth.getUser().then(async ({ data: { user }, error }) => {
+          if (!active || current !== generation) return;
+          if (error || user?.id !== id) { setMessage('Sign in to access your account.'); return; }
+          const response = await fetch('/api/claims', { cache: 'no-store' });
+          if (!response.ok) throw new Error('Claim history unavailable');
+          const result = await response.json() as { items?: Claim[] };
+          if (active && current === generation) {
+            setClaims(result.items ?? []);
+            setUserId(id);
+            setMessage('');
+          }
+        }).catch(() => {
+          if (active && current === generation) setMessage('Could not load claim history.');
+        });
+      }, 0);
+    });
+    return () => { active = false; generation++; subscription.unsubscribe(); };
   }, []);
 
   async function signOut() {
