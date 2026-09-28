@@ -1,19 +1,22 @@
+# Lo-lyfe
 
-## Runnable preview
+A Next.js opportunity catalog and one-device profile foundation. The default preview shows illustrative listings only. With a configured Supabase project, the catalog reads reviewed, unexpired opportunities; no real listings are seeded yet.
 
-The first app slice is a Next.js catalog with illustrative listings and client-side search, category and location filters. The records are explicitly examples; no listing is verified or links to a claim form. Eligibility is a preliminary filter, never a determination. Profile inputs stay in memory and are not submitted or stored.
+## Run
 
 ```bash
 pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-Visit http://localhost:3000. Run `pnpm test`, `pnpm lint`, `pnpm typecheck`, and `pnpm build` before opening a PR. CI runs those checks on pushes and PRs.
+Set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` in `apps/web/.env.local` to use Auth and the development catalog. Set `SUPABASE_SERVICE_ROLE_KEY` only in a trusted server environment to enable account deletion. Configure the Supabase Auth site URL and redirect allowlist for `/auth/callback`. Do not commit keys.
 
-This preview does **not** implement Supabase, ingestion, applications, authentication, payments, or ads. The epic issues remain the source of truth for those phases. No secrets should be committed.
+Run `pnpm test`, `pnpm lint`, `pnpm typecheck`, and `pnpm build`. CI runs these checks on each PR.
 
-## Workspace
+## Privacy and current behavior
 
-`apps/web` contains the Next.js app, `packages/core` contains shared opportunity and eligibility logic, and `supabase/migrations` will contain the backend schema. See `docs/policies/source-policy.md` for source and review requirements. Database credentials and live ingestion are not configured.
+Users sign in by email link. Their ZIP, birth year, household size, and employment answers are encrypted with a non-extractable Web Crypto key in IndexedDB on one device. The key and ciphertext remain in the same browser storage, so this is device-local storage, not a defense against a compromised browser or device. Clearing site data loses the profile, and signing in on another device starts a blank one. Supabase Auth necessarily stores the sign-in email; the app database never stores profile answers. Do not enter SSNs, banking details, or full claim forms into the profile.
 
-The shared core now includes a missing-field calculator and strict ingestion draft validator. These are offline contracts only: no crawler, verified live listing, profile persistence, or submission path is enabled.
+The database contains reviewed catalog records, saved listing IDs, minimal account rows, and claim statuses. The app links to official sites and lets the user attest after submitting a claim themselves. It never auto-submits a form. Account export contains server-held data; the local profile is excluded. Deletion needs the server-only key configured.
+
+See [source policy](docs/policies/source-policy.md), [device-only design](docs/superpowers/specs/2026-09-28-device-only-profile-design.md), and [Supabase development verification](supabase/tests/rls-integration.md). The nine roadmap epics remain staged work; live ingestion, source verification, payments, ads, mobile packaging, and launch operations are not part of this foundation.
