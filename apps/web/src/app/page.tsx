@@ -61,6 +61,13 @@ export default function Home() {
     setSavedIds(current => removing ? current.filter(item => item !== id) : [...current, id]);
     setSaveMessage(removing ? 'Removed from saved items.' : 'Saved to your account.');
   }
+  async function startClaim(id: string) {
+    const response = await fetch('/api/claims', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ opportunityId: id }),
+    });
+    setSaveMessage(response.ok ? 'Claim started. Review the official terms and track it in your account.' : 'Could not start this claim.');
+  }
   const items = useMemo(() => {
     const filtered = filterOpportunities(catalogState === 'sample' ? sampleOpportunities : catalog, { query, category, state });
     return onlyPossible ? filtered.filter(item => evaluateEligibility(item, { state, age: age ? Number(age) : undefined }) === 'possible') : filtered;
@@ -95,7 +102,7 @@ export default function Home() {
         </div>
         <div className="results-heading"><h3>Fresh possibilities <span>({items.length})</span></h3><span>{catalogState === 'sample' ? 'EXAMPLE LISTINGS · NOT LIVE' : 'REVIEWED CATALOG'}</span></div>
         {saveMessage && <p role="status">{saveMessage}</p>}
-        <div className="cards">{items.map((item, index) => { const status = evaluateEligibility(item, { state, age: age ? Number(age) : undefined }); return <article className="card" key={item.id}><div className="card-top"><span className="card-icon">{categories.find(c => c.id === item.category)?.icon}</span><span className="sample-tag">{catalogState === 'sample' ? `EXAMPLE ${String(index + 1).padStart(2, '0')}` : 'REVIEWED'}</span></div><div className="card-meta">{item.category.toUpperCase()} <span>·</span> {item.location.toUpperCase()}</div><h4>{item.title}</h4><p>{item.summary}</p><div className="card-requirements">{item.requirements.map(r => <span key={r}>{r}</span>)}</div><div className="card-footer"><div><small>POTENTIAL VALUE</small><strong>{item.amount}</strong></div><span className={`match ${status}`}>{status === 'possible' ? 'Potential match' : status === 'ineligible' ? 'Location / age mismatch' : 'More info needed'}</span></div>{catalogState === 'live' && <div><a href={item.url} target="_blank" rel="noopener noreferrer">View official claim page ↗</a> {signedIn ? <button type="button" onClick={() => void toggleSave(item.id)}>{savedIds.includes(item.id) ? 'Remove saved' : 'Save'}</button> : <Link href="/auth">Sign in to save</Link>}</div>}</article>; })}</div>
+        <div className="cards">{items.map((item, index) => { const status = evaluateEligibility(item, { state, age: age ? Number(age) : undefined }); return <article className="card" key={item.id}><div className="card-top"><span className="card-icon">{categories.find(c => c.id === item.category)?.icon}</span><span className="sample-tag">{catalogState === 'sample' ? `EXAMPLE ${String(index + 1).padStart(2, '0')}` : 'REVIEWED'}</span></div><div className="card-meta">{item.category.toUpperCase()} <span>·</span> {item.location.toUpperCase()}</div><h4>{item.title}</h4><p>{item.summary}</p><div className="card-requirements">{item.requirements.map(r => <span key={r}>{r}</span>)}</div><div className="card-footer"><div><small>POTENTIAL VALUE</small><strong>{item.amount}</strong></div><span className={`match ${status}`}>{status === 'possible' ? 'Potential match' : status === 'ineligible' ? 'Location / age mismatch' : 'More info needed'}</span></div>{catalogState === 'live' && <div><a href={item.url} target="_blank" rel="noopener noreferrer">View official claim page ↗</a> {signedIn ? <><button type="button" onClick={() => void toggleSave(item.id)}>{savedIds.includes(item.id) ? 'Remove saved' : 'Save'}</button> <button type="button" onClick={() => void startClaim(item.id)}>Track a claim</button></> : <Link href="/auth">Sign in to save</Link>}</div>}</article>; })}</div>
         {items.length === 0 && <div className="empty"><span>✳</span><h4>No examples found</h4><p>Try another search or clear a filter.</p><button type="button" onClick={() => {setQuery('');setState('');setCategory('all');setOnlyPossible(false);setAge('');}}>Clear filters</button></div>}
       </section>
 
