@@ -2,11 +2,17 @@
   "name": "@lo-lyfe/core",
   "version": "0.2.0",
   "private": true,
-  "exports": { ".": "./src/index.ts" },
+  "exports": {
+    ".": "./src/index.ts"
+  },
   "scripts": {
     "test": "node --experimental-strip-types --test tests/*.test.ts",
     "typecheck": "tsc --noEmit"
   },
-  "devDependencies": { "@types/node": "^24.0.0", "typescript": "^5.9.0" },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.0"
+  },
   "type": "module"
 }
