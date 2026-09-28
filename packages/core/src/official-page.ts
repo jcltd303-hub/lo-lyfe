@@ -16,14 +16,24 @@ export function parseOfficialPage(html: string, pageUrl: string): FeedItem[] {
   const headingMatch = html.match(/<h1\b[^>]*>([\s\S]*?)<\/h1>/i);
   const body = text(html).slice(0, 30_000);
   const title = text(headingMatch?.[1] ?? titleMatch?.[1] ?? '').slice(0, 500) || undefined;
-  const links = [...html.matchAll(/<a\b[^>]*href=["']([^"'#]+)["'][^>]*>([\s\S]*?)<\/a>/gi)]
-    .slice(0, 250)
-    .map(match => {
-      try {
-        const url = new URL(decodeHtml(match[1]), base);
-        if (url.protocol !== 'https:') return undefined;
-        return { title: text(match[2]).slice(0, 500) || title, link: url.href, description: body };
-      } catch { return undefined; }
-    }).filter((item): item is FeedItem => Boolean(item));
-  return links.length ? links : [{ title, link: base.href, description: body }];
+  const links: FeedItem[] = [];
+  for (const match of [...html.matchAll(/<a\b[^>]*href=["']([^"'#]+)["'][^>]*>([\s\S]*?)<\/a>/gi)].slice(0, 250)) {
+    try {
+      const url = new URL(decodeHtml(match[1]), base);
+      if (url.protocol !== 'https:') continue;
+      const linkTitle = text(match[2]).slice(0, 500) || title;
+      links.push({
+        ...(linkTitle ? { title: linkTitle } : {}),
+        link: url.href,
+        description: body,
+      });
+    } catch {
+      // Ignore malformed links in otherwise usable official pages.
+    }
+  }
+  return links.length ? links : [{
+    ...(title ? { title } : {}),
+    link: base.href,
+    description: body,
+  }];
 }
