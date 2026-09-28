@@ -1,26 +1,19 @@
 {
   "name": "lo-lyfe",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
+  "packageManager": "pnpm@11.25.0",
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "typecheck": "tsc --noEmit",
-    "test": "node --experimental-strip-types --test tests/*.test.ts",
-    "lint": "eslint ."
-  },
-  "dependencies": {
-    "next": "16.3.6",
-    "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "dev": "turbo dev --filter=@lo-lyfe/web",
+    "build": "turbo build",
+    "lint": "eslint apps/web packages/core",
+    "typecheck": "turbo typecheck",
+    "test": "turbo test"
   },
   "devDependencies": {
-    "@types/node": "^24.0.0",
-    "@types/react": "^19.0.0",
-    "@types/react-dom": "^19.0.0",
     "eslint": "^9.39.5",
-    "eslint-config-next": "^16.3.6",
+    "eslint-config-next": "16.3.6",
+    "turbo": "^2.11.5",
     "typescript": "^5.9.0"
   },
   "type": "module"

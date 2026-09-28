@@ -2,8 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { evaluateEligibility, filterOpportunities } from '../lib/eligibility';
-import { sampleOpportunities, type Category } from '../lib/opportunities';
+import { evaluateEligibility, filterOpportunities, sampleOpportunities, type Category } from '@lo-lyfe/core';
 
 const categories: { id: Category | 'all'; label: string; icon: string }[] = [
   { id: 'all', label: 'All finds', icon: '✦' },

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { evaluateEligibility, filterOpportunities } from '../src/lib/eligibility.ts';
-import type { Opportunity } from '../src/lib/opportunities.ts';
+import { evaluateEligibility, filterOpportunities } from '../src/eligibility.ts';
+import type { Opportunity } from '../src/opportunities.ts';
 
 const item: Opportunity = {
   id: 'a', title: 'Example', category: 'refund', summary: 'Example',
