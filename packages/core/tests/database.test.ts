@@ -37,7 +37,8 @@ test('migration isolates unpublished records and saved IDs by role', async () =>
     `);
     await db.exec(migration);
     await db.query('insert into auth.users(id) values ($1),($2)', [userA, userB]);
-    await db.query('insert into public.users(id) values ($1),($2)', [userA, userB]);
+    const accountRows = await db.query('select id from public.users');
+    assert.equal(accountRows.rows.length, 2);
     await db.query("insert into public.sources(id,name,source_type,base_url,active) values ('33333333-3333-4333-8333-333333333333','Official','government','https://example.gov',true)");
     await db.query("insert into public.opportunities(id,source_id,title,summary,category,claim_url,canonical_url,eligibility_text,deadline,status,reviewed_at) values ('44444444-4444-4444-8444-444444444444','33333333-3333-4333-8333-333333333333','Public','Summary','refund','https://example.gov/claim','https://example.gov/claim','US',current_date + 1,'published',now()),('55555555-5555-4555-8555-555555555555','33333333-3333-4333-8333-333333333333','Draft','Summary','refund','https://example.gov/draft','https://example.gov/draft','US',current_date + 1,'draft',null)");
 
