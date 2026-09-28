@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import { PGlite } from '@electric-sql/pglite';
 
-const migration = readFileSync(new URL('../../../supabase/migrations/20260928030000_foundation.sql', import.meta.url), 'utf8')
+const migration = readFileSync(new URL('../../../supabase/migrations/20260928071003_foundation_device_only_profile.sql', import.meta.url), 'utf8')
   // PGlite supplies gen_random_uuid(), but its embedded build does not include Supabase extensions.
   .replace(/^create extension if not exists (pgcrypto|vector).*;$/gm, '');
 
