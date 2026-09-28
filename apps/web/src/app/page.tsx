@@ -19,6 +19,9 @@ const categories: { id: Category | 'all'; label: string; icon: string }[] = [
 
 export default function Home() {
   const [catalog, setCatalog] = useState<Opportunity[]>([]);
+  const [savedIds, setSavedIds] = useState<string[]>([]);
+  const [signedIn, setSignedIn] = useState(false);
+  const [saveMessage, setSaveMessage] = useState('');
   const [catalogState, setCatalogState] = useState<'sample' | 'loading' | 'live' | 'error'>(
     process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ? 'loading' : 'sample'
   );
@@ -36,11 +39,28 @@ export default function Home() {
     }).catch(() => { if (active) setCatalogState('error'); });
     void client.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) return;
+      if (active) setSignedIn(true);
+      const response = await fetch('/api/saves', { cache: 'no-store' });
+      if (response.ok && active) {
+        const result = await response.json() as { items: { opportunity_id: string }[] };
+        setSavedIds(result.items.map(item => item.opportunity_id));
+      }
       const saved = await createDeviceVault(indexedDbVaultStore).readProfile(user.id);
       if (active && typeof saved?.birth_year === 'number') setAge(String(new Date().getFullYear() - saved.birth_year));
     }).catch(() => {});
     return () => { active = false; };
   }, [catalogState]);
+  async function toggleSave(id: string) {
+    const removing = savedIds.includes(id);
+    const response = await fetch('/api/saves', {
+      method: removing ? 'DELETE' : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ opportunityId: id }),
+    });
+    if (!response.ok) { setSaveMessage('Could not update saved items.'); return; }
+    setSavedIds(current => removing ? current.filter(item => item !== id) : [...current, id]);
+    setSaveMessage(removing ? 'Removed from saved items.' : 'Saved to your account.');
+  }
   const items = useMemo(() => {
     const filtered = filterOpportunities(catalogState === 'sample' ? sampleOpportunities : catalog, { query, category, state });
     return onlyPossible ? filtered.filter(item => evaluateEligibility(item, { state, age: age ? Number(age) : undefined }) === 'possible') : filtered;
@@ -74,7 +94,8 @@ export default function Home() {
           <label className="possible-toggle"><input type="checkbox" checked={onlyPossible} onChange={event => setOnlyPossible(event.target.checked)} /> Show only possible matches <small>Based on the details you enter here. Never a guarantee.</small></label>
         </div>
         <div className="results-heading"><h3>Fresh possibilities <span>({items.length})</span></h3><span>{catalogState === 'sample' ? 'EXAMPLE LISTINGS · NOT LIVE' : 'REVIEWED CATALOG'}</span></div>
-        <div className="cards">{items.map((item, index) => { const status = evaluateEligibility(item, { state, age: age ? Number(age) : undefined }); return <article className="card" key={item.id}><div className="card-top"><span className="card-icon">{categories.find(c => c.id === item.category)?.icon}</span><span className="sample-tag">{catalogState === 'sample' ? `EXAMPLE ${String(index + 1).padStart(2, '0')}` : 'REVIEWED'}</span></div><div className="card-meta">{item.category.toUpperCase()} <span>·</span> {item.location.toUpperCase()}</div><h4>{item.title}</h4><p>{item.summary}</p><div className="card-requirements">{item.requirements.map(r => <span key={r}>{r}</span>)}</div><div className="card-footer"><div><small>POTENTIAL VALUE</small><strong>{item.amount}</strong></div><span className={`match ${status}`}>{status === 'possible' ? 'Potential match' : status === 'ineligible' ? 'Location / age mismatch' : 'More info needed'}</span></div>{catalogState === 'live' && <a href={item.url} target="_blank" rel="noopener noreferrer">View official claim page ↗</a>}</article>; })}</div>
+        {saveMessage && <p role="status">{saveMessage}</p>}
+        <div className="cards">{items.map((item, index) => { const status = evaluateEligibility(item, { state, age: age ? Number(age) : undefined }); return <article className="card" key={item.id}><div className="card-top"><span className="card-icon">{categories.find(c => c.id === item.category)?.icon}</span><span className="sample-tag">{catalogState === 'sample' ? `EXAMPLE ${String(index + 1).padStart(2, '0')}` : 'REVIEWED'}</span></div><div className="card-meta">{item.category.toUpperCase()} <span>·</span> {item.location.toUpperCase()}</div><h4>{item.title}</h4><p>{item.summary}</p><div className="card-requirements">{item.requirements.map(r => <span key={r}>{r}</span>)}</div><div className="card-footer"><div><small>POTENTIAL VALUE</small><strong>{item.amount}</strong></div><span className={`match ${status}`}>{status === 'possible' ? 'Potential match' : status === 'ineligible' ? 'Location / age mismatch' : 'More info needed'}</span></div>{catalogState === 'live' && <div><a href={item.url} target="_blank" rel="noopener noreferrer">View official claim page ↗</a> {signedIn ? <button type="button" onClick={() => void toggleSave(item.id)}>{savedIds.includes(item.id) ? 'Remove saved' : 'Save'}</button> : <Link href="/auth">Sign in to save</Link>}</div>}</article>; })}</div>
         {items.length === 0 && <div className="empty"><span>✳</span><h4>No examples found</h4><p>Try another search or clear a filter.</p><button type="button" onClick={() => {setQuery('');setState('');setCategory('all');setOnlyPossible(false);setAge('');}}>Clear filters</button></div>}
       </section>
 
