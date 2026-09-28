@@ -29,3 +29,8 @@ export type { ParsedRule } from './rule-parser.ts';
 
 export { evaluatePrecisionAt10, precisionAtK } from './eval.ts';
 export type { EvalCase } from './eval.ts';
+
+export { buildApplyPlan } from './apply.ts';
+export type { ApplyPlan } from './apply.ts';
+export { scamSignals } from './scam.ts';
+export type { ScamSignal } from './scam.ts';
