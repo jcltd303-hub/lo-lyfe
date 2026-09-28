@@ -48,6 +48,7 @@ export async function loadPublishedCatalog(client: SupabaseClient): Promise<Oppo
   const { data, error } = await client.from('opportunities')
     .select('id,title,summary,category,claim_url,deadline,payout_description,proof_required,sources(name),eligibility_rules(rule_type,rule_value,reviewer_approved)')
     .eq('status', 'published')
+    .not('reviewed_at', 'is', null)
     .gte('deadline', new Date().toISOString().slice(0, 10))
     .order('deadline', { ascending: true });
   if (error) throw error;
