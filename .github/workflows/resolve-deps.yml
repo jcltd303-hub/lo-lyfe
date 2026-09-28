@@ -2,6 +2,7 @@ name: Resolve Supabase dependencies
 on:
   push:
     branches: [feat/catalog-foundation]
+  pull_request:
 jobs:
   lockfile:
     runs-on: ubuntu-latest
