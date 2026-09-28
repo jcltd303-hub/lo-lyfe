@@ -30,7 +30,8 @@ export default function AccountPage() {
 
   async function signOut() {
     try {
-      await createClient().auth.signOut();
+      const { error } = await createClient().auth.signOut();
+      if (error) throw error;
       setUserId(null);
       setClaims([]);
       setMessage('Signed out. Your encrypted profile remains on this device until you delete it.');
