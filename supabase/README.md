@@ -1,5 +1,7 @@
-# Database deployment gate
+# Supabase schema
 
-The migration in `migrations/` is an unexecuted schema draft. The core test suite exercises its tables and RLS with embedded PostgreSQL (PGlite), omitting the two extensions unavailable in that runtime. Apply it to an isolated development Supabase project first, then repeat cross-user and anonymous RLS tests, verify extensions and role grants, and inspect query plans. Do not point the preview web app at it until authentication, key management, profile encryption, source review, and deletion/export flows are implemented.
+The three migrations in `migrations/` are applied to isolated development project `nutfhypocktoinqsmhfo`. Their filenames match the project migration history. Do not apply them again to that project. Use a separate production project and run the same RLS checks before release.
 
-Profile answers are stored only in an encrypted vault on one device. The database contains no `profile_values` table. Do not send answers, eligibility attributes, or form contents to Supabase, analytics, or logs. Saved IDs are owner-scoped by RLS; claim writes remain restricted to authenticated server operations.
+`public.profile_values` does not exist. Profile answers and the Web Crypto key remain on one device in IndexedDB; Supabase Auth stores the sign-in email. No client secret key is used for catalog, saves, or claims. RLS restricts public catalog reads and user-owned saves/claims. Only the server deletion endpoint needs a server-only service role key.
+
+See [live RLS results](tests/rls-integration.md). The PGlite test runs the initial schema without extensions and checks row isolation; the live development checks verify Supabase roles, grants, Auth signup trigger, and claim transitions. Keep all future migrations committed with versions matching the target project's migration history.
