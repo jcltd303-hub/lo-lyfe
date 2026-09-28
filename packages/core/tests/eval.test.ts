@@ -1,0 +1,1 @@
+import assert from'node:assert/strict';import{test}from'node:test';import{evaluatePrecisionAt10,precisionAtK}from'../src/eval.ts';test('precision metrics are deterministic',()=>{assert.equal(precisionAtK(['a','b'],['a'],2),.5);assert.equal(evaluatePrecisionAt10([{query:'refund',relevantIds:['a']}],()=>['a']),.1)});
