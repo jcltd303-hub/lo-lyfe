@@ -15,7 +15,7 @@ interface CatalogRow {
   deadline: string;
   payout_description: string | null;
   proof_required: string[];
-  sources: { name: string } | null;
+  sources: { name: string } | { name: string }[] | null;
   eligibility_rules: RuleRow[];
 }
 
@@ -37,7 +37,7 @@ export function mapPublishedRow(row: CatalogRow): Opportunity {
     url: row.claim_url,
     deadline: row.deadline,
     amount: row.payout_description ?? 'Varies',
-    provider: row.sources?.name ?? 'Verified source',
+    provider: (Array.isArray(row.sources) ? row.sources[0]?.name : row.sources?.name) ?? 'Verified source',
     location: rules.states?.join(', ') ?? 'Check official terms',
     requirements: row.proof_required ?? [],
     rules,
