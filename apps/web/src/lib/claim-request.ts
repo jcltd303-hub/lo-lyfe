@@ -1,9 +1,4 @@
 import { parseSaveRequest } from './save-request.ts';
-
-export function parseSubmitRequest(value: unknown): { claimId: string; attested: true } {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Invalid submission');
-  const data = value as Record<string, unknown>;
-  if (Object.keys(data).length !== 2 || data.attested !== true) throw new Error('Invalid submission');
-  const { opportunityId: claimId } = parseSaveRequest({ opportunityId: data.claimId });
-  return { claimId, attested: true };
-}
+export type ClaimProgress='pending'|'paid'|'rejected';
+export function parseSubmitRequest(value:unknown):{claimId:string;attested:true}{if(!value||typeof value!=='object'||Array.isArray(value))throw new Error('Invalid submission');const d=value as Record<string,unknown>;if(Object.keys(d).length!==2||d.attested!==true)throw new Error('Invalid submission');const{opportunityId:claimId}=parseSaveRequest({opportunityId:d.claimId});return{claimId,attested:true}}
+export function parseProgressRequest(value:unknown):{claimId:string;status:ClaimProgress}{if(!value||typeof value!=='object'||Array.isArray(value))throw new Error('Invalid progress');const d=value as Record<string,unknown>;if(Object.keys(d).length!==2||!['pending','paid','rejected'].includes(String(d.status)))throw new Error('Invalid progress');const{opportunityId:claimId}=parseSaveRequest({opportunityId:d.claimId});return{claimId,status:d.status as ClaimProgress}}
