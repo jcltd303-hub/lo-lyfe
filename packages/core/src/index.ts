@@ -12,3 +12,7 @@ export type { FeedItem } from './connectors.ts';
 
 export { findLikelyDuplicate, lifecycleStatus, textSimilarity } from './dedupe.ts';
 export type { DedupeRecord } from './dedupe.ts';
+
+export { parseOfficialPage } from './official-page.ts';
+export { extractionContract, feedItemExtractionInput, parseStrictExtraction } from './extractors.ts';
+export type { ExtractedCandidate } from './extractors.ts';
