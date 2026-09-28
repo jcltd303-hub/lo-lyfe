@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createClient } from '../../../lib/supabase/server';
 import { parseSaveRequest } from '../../../lib/save-request';
-import { parseSubmitRequest } from '../../../lib/claim-request';
+import { parseProgressRequest, parseSubmitRequest } from '../../../lib/claim-request';
 
 async function authenticated() {
   const client = await createClient();
@@ -39,9 +39,13 @@ export async function POST(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   const { client, user } = await authenticated();
   if (!user) return NextResponse.json({ error: 'Sign in required' }, { status: 401 });
+  const raw = await request.json();
   let body: { claimId: string; attested: true };
-  try { body = parseSubmitRequest(await request.json()); }
-  catch { return NextResponse.json({ error: 'Review and attest before submission' }, { status: 400 }); }
+  try { body = parseSubmitRequest(raw); }
+  catch {
+    try { const progress = parseProgressRequest(raw); const { data, error } = await client.from('claims').update({ status: progress.status }).eq('id', progress.claimId).eq('user_id', user.id).in('status', ['submitted','pending']).select('id,opportunity_id,status').maybeSingle(); if (error || !data) return NextResponse.json({ error: 'Invalid claim transition' }, { status: 409 }); return NextResponse.json({ claim: data }, { headers: { 'Cache-Control': 'private, no-store' } }); }
+    catch { return NextResponse.json({ error: 'Review and attest before submission' }, { status: 400 }); }
+  }
   const { data, error } = await client.from('claims').update({ status: 'submitted' })
     .eq('id', body.claimId).eq('user_id', user.id).eq('status', 'started')
     .select('id,opportunity_id,status,attested_at,submitted_at').maybeSingle();
