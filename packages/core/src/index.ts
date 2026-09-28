@@ -22,3 +22,7 @@ export type { RobotsRules } from './robots.ts';
 export { cosineSimilarity, textFeatureEmbedding } from './embedding.ts';
 
 export { parseDiscordApi, parseRedditApi, parseTelegramBotApi } from './community-connectors.ts';
+
+export { explainEligibility, rankOpportunities } from './ranking.ts';
+export { parseEligibilityRules } from './rule-parser.ts';
+export type { ParsedRule } from './rule-parser.ts';

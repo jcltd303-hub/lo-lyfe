@@ -1,0 +1,2 @@
+import assert from'node:assert/strict';import{test}from'node:test';import{parseEligibilityRules}from'../src/rule-parser.ts';
+test('parses deterministic eligibility predicates',()=>{const r=parseEligibilityRules('Colorado residents CO age at least 18 with proof of purchase');const states=r.find(x=>x.ruleType==='state')?.ruleValue.states;assert.ok(Array.isArray(states));assert.equal(states[0],'CO');assert.equal(r.find(x=>x.ruleType==='min_age')?.ruleValue.age,18);assert.equal(r.find(x=>x.ruleType==='purchase_proof')?.ruleValue.required,true)});
