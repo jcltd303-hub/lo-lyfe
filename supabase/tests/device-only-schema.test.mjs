@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 
-const migration = readFileSync(new URL('../migrations/20260928030000_foundation.sql', import.meta.url), 'utf8');
+const migration = readFileSync(new URL('../migrations/20260928071003_foundation_device_only_profile.sql', import.meta.url), 'utf8');
 
 test('foundation stores no user profile answers', () => {
   assert.doesNotMatch(migration, /create table public\.profile_values\b/i);
