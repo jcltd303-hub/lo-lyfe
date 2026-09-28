@@ -1,34 +1,22 @@
 # Lo-lyfe
 
-Aggregator for free money and free stuff: class action settlements, free trials and coupons, refunds and replacements, low-barrier grants and stipends. Users get a dynamic profile that pre-fills applications, and a catalog filtered to what they actually qualify for.
+A Next.js opportunity catalog and one-device profile foundation. The default preview shows illustrative listings only. With a configured Supabase project, the catalog reads reviewed, unexpired opportunities; no real listings are seeded yet.
 
-## Stack
-- Next.js (App Router, TypeScript) on Vercel, Capacitor shell for mobile later
-- Supabase: Postgres, pgvector, auth, row-level security
-- Ingestion: Vercel Cron or GitHub Actions, Crawlee/Firecrawl, LLM extraction to a strict schema
-- Retrieval: hard SQL eligibility filters, then hybrid BM25 + vector ranking
-- Optimization: bandits (Thompson sampling) for source crawl rates and ad selection
+## Run
 
-## Ground rules
-1. Vercel Hobby is non-commercial. Upgrade to Pro before ads go live.
-2. Only disclosed, honest-review offers. No paid fake 5-star reviews.
-3. Use official APIs and public sources. Respect robots.txt and platform ToS.
-4. Users attest before every submission. No blind auto-submit.
-5. Never store SSNs or bank numbers. Sensitive profile fields are encrypted per field.
+```bash
+pnpm install --frozen-lockfile
+pnpm dev
+```
 
-## Roadmap
-Tracked as epic issues with task checklists. See [Issues labeled `epic`](../../issues?q=is%3Aissue+label%3Aepic).
+Set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` in `apps/web/.env.local` to use Auth and the development catalog. Set `SUPABASE_SERVICE_ROLE_KEY` only in a trusted server environment to enable account deletion. Configure the Supabase Auth site URL and redirect allowlist for `/auth/callback`. Do not commit keys.
 
-| Phase | Focus | Timing |
-|---|---|---|
-| [0](../../issues/1) | Foundations and compliance | Week 1 |
-| [1](../../issues/2) | Data model and dynamic profile | Weeks 1-3 |
-| [2](../../issues/3) | Ingestion pipeline | Weeks 2-5 |
-| [3](../../issues/4) | Retrieval and eligibility | Weeks 4-6 |
-| [4](../../issues/5) | Apply flow and trust | Weeks 5-8 |
-| [5](../../issues/6) | Ad monetization | Weeks 7-9 |
-| [6](../../issues/7) | Autonomy loop | Weeks 10-13 |
-| [7](../../issues/8) | VIP and mobile | Weeks 12-16 |
-| [8](../../issues/9) | Launch and operations | Weeks 16+ |
+Run `pnpm test`, `pnpm lint`, `pnpm typecheck`, and `pnpm build`. CI runs these checks on each PR.
 
-Task tags: `FE` frontend, `BE` backend, `Data` ingestion/ML, `Ops` infra, `legal` compliance.
+## Privacy and current behavior
+
+Users sign in by email link. Their ZIP, birth year, household size, and employment answers are encrypted with a non-extractable Web Crypto key in IndexedDB on one device. The key and ciphertext remain in the same browser storage, so this is device-local storage, not a defense against a compromised browser or device. Clearing site data loses the profile, and signing in on another device starts a blank one. Supabase Auth necessarily stores the sign-in email; the app database never stores profile answers. Do not enter SSNs, banking details, or full claim forms into the profile.
+
+The database contains reviewed catalog records, saved listing IDs, minimal account rows, and claim statuses. The app links to official sites and lets the user attest after submitting a claim themselves. It never auto-submits a form. Account export contains server-held data; the local profile is excluded. Deletion needs the server-only key configured.
+
+See [source policy](docs/policies/source-policy.md), [device-only design](docs/superpowers/specs/2026-09-28-device-only-profile-design.md), and [Supabase development verification](supabase/tests/rls-integration.md). The nine roadmap epics remain staged work; live ingestion, source verification, payments, ads, mobile packaging, and launch operations are not part of this foundation.

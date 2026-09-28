@@ -1,0 +1,20 @@
+{
+  "name": "lo-lyfe",
+  "version": "0.2.0",
+  "private": true,
+  "packageManager": "pnpm@11.25.0",
+  "scripts": {
+    "dev": "turbo dev --filter=@lo-lyfe/web",
+    "build": "turbo build",
+    "lint": "eslint apps/web packages/core",
+    "typecheck": "turbo typecheck",
+    "test": "node --test supabase/tests/*.test.mjs apps/web/src/lib/*.test.mjs && turbo test"
+  },
+  "devDependencies": {
+    "eslint": "^9.39.5",
+    "eslint-config-next": "16.3.6",
+    "turbo": "^2.11.5",
+    "typescript": "^5.9.0"
+  },
+  "type": "module"
+}
