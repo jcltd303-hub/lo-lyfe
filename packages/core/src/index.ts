@@ -9,3 +9,6 @@ export type { Candidate, CrawlSource, FetchDecision, Source, ReviewDraft } from 
 
 export { parseJsonFeed, parseSyndicationFeed } from './connectors.ts';
 export type { FeedItem } from './connectors.ts';
+
+export { findLikelyDuplicate, lifecycleStatus, textSimilarity } from './dedupe.ts';
+export type { DedupeRecord } from './dedupe.ts';
