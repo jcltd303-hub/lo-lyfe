@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import Link from 'next/link';
 import { evaluateEligibility, filterOpportunities } from '../lib/eligibility';
 import { sampleOpportunities, type Category } from '../lib/opportunities';
 
@@ -26,7 +27,7 @@ export default function Home() {
 
   return <div className="site-shell">
     <header className="topbar wrap">
-      <a className="brand" href="/" aria-label="Lo-lyfe home"><span className="brand-mark">lo<span>✳</span></span><span className="brand-word">lo-lyfe<span className="brand-dot">.</span></span></a>
+      <Link className="brand" href="/" aria-label="Lo-lyfe home"><span className="brand-mark">lo<span>✳</span></span><span className="brand-word">lo-lyfe<span className="brand-dot">.</span></span></Link>
       <nav aria-label="Main navigation"><a className="nav-active" href="#explore">Explore</a><a href="#how-it-works">How it works</a><a href="https://github.com/jcltd303-hub/lo-lyfe/issues" target="_blank" rel="noopener noreferrer">Roadmap ↗</a></nav>
       <a className="top-cta" href="#explore">Explore finds <span>↗</span></a>
     </header>

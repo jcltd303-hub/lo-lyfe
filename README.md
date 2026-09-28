@@ -8,6 +8,6 @@ npm ci
 npm run dev
 ```
 
-Visit http://localhost:3000. Run `npm test`, `npm run typecheck`, and `npm run build` before opening a PR. CI runs those checks on pushes and PRs.
+Visit http://localhost:3000. Run `npm test`, `npm run lint`, `npm run typecheck`, and `npm run build` before opening a PR. CI runs those checks on pushes and PRs.
 
 This preview does **not** implement Supabase, ingestion, applications, authentication, payments, or ads. The epic issues remain the source of truth for those phases. No secrets should be committed.

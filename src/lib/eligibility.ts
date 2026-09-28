@@ -5,9 +5,10 @@ export type Eligibility = 'possible' | 'ineligible' | 'unknown';
 
 export function evaluateEligibility(item: Opportunity, profile: Profile): Eligibility {
   const { states, minAge } = item.rules;
+  if (!states?.length && minAge === undefined) return 'unknown';
   if (states?.length && profile.state && !states.includes(profile.state.toUpperCase())) return 'ineligible';
-  if (minAge !== undefined && profile.age !== undefined && profile.age < minAge) return 'ineligible';
-  if ((states?.length && !profile.state) || (minAge !== undefined && profile.age === undefined)) return 'unknown';
+  if (minAge !== undefined && Number.isFinite(profile.age) && profile.age! < minAge) return 'ineligible';
+  if ((states?.length && !profile.state) || (minAge !== undefined && !Number.isFinite(profile.age))) return 'unknown';
   return 'possible';
 }
 

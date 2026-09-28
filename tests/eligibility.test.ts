@@ -19,6 +19,12 @@ test('known mismatch excludes an opportunity', () => {
 test('matching facts indicate a possible match, never a guarantee', () => {
   assert.equal(evaluateEligibility(item, { state: 'CO', age: 30 }), 'possible');
 });
+test('a sample without structured rules cannot claim a potential match', () => {
+  assert.equal(evaluateEligibility({ ...item, rules: {} }, { state: 'CO', age: 30 }), 'unknown');
+});
+test('a non-finite age does not establish a potential match', () => {
+  assert.equal(evaluateEligibility(item, { state: 'CO', age: Number.NaN }), 'unknown');
+});
 test('search, category and state filters work together', () => {
   assert.deepEqual(filterOpportunities([item], { query: 'example', category: 'refund', state: 'CO' }).map(x => x.id), ['a']);
   assert.deepEqual(filterOpportunities([item], { query: 'missing', category: 'all', state: '' }), []);
