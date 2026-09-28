@@ -34,3 +34,5 @@ export { buildApplyPlan } from './apply.ts';
 export type { ApplyPlan } from './apply.ts';
 export { scamSignals } from './scam.ts';
 export type { ScamSignal } from './scam.ts';
+
+export { disclosedReviewGuidance } from './review-disclosure.ts';
