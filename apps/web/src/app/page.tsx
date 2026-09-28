@@ -1,8 +1,12 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { evaluateEligibility, filterOpportunities, sampleOpportunities, type Category } from '@lo-lyfe/core';
+import { createClient } from '../lib/supabase/browser';
+import { loadPublishedCatalog } from '../lib/catalog';
+import { createDeviceVault, indexedDbVaultStore } from '../lib/device-vault';
+import type { Opportunity } from '@lo-lyfe/core';
 
 const categories: { id: Category | 'all'; label: string; icon: string }[] = [
   { id: 'all', label: 'All finds', icon: '✦' },
@@ -14,20 +18,38 @@ const categories: { id: Category | 'all'; label: string; icon: string }[] = [
 ];
 
 export default function Home() {
+  const [catalog, setCatalog] = useState<Opportunity[]>([]);
+  const [catalogState, setCatalogState] = useState<'sample' | 'loading' | 'live' | 'error'>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ? 'loading' : 'sample'
+  );
   const [category, setCategory] = useState<Category | 'all'>('all');
   const [query, setQuery] = useState('');
   const [state, setState] = useState('');
   const [age, setAge] = useState('');
   const [onlyPossible, setOnlyPossible] = useState(false);
+  useEffect(() => {
+    if (catalogState !== 'loading') return;
+    let active = true;
+    const client = createClient();
+    void loadPublishedCatalog(client).then(items => {
+      if (active) { setCatalog(items); setCatalogState('live'); }
+    }).catch(() => { if (active) setCatalogState('error'); });
+    void client.auth.getUser().then(async ({ data: { user } }) => {
+      if (!user) return;
+      const saved = await createDeviceVault(indexedDbVaultStore).readProfile(user.id);
+      if (active && typeof saved?.birth_year === 'number') setAge(String(new Date().getFullYear() - saved.birth_year));
+    }).catch(() => {});
+    return () => { active = false; };
+  }, [catalogState]);
   const items = useMemo(() => {
-    const filtered = filterOpportunities(sampleOpportunities, { query, category, state });
+    const filtered = filterOpportunities(catalogState === 'sample' ? sampleOpportunities : catalog, { query, category, state });
     return onlyPossible ? filtered.filter(item => evaluateEligibility(item, { state, age: age ? Number(age) : undefined }) === 'possible') : filtered;
-  }, [category, query, state, age, onlyPossible]);
+  }, [catalog, catalogState, category, query, state, age, onlyPossible]);
 
   return <div className="site-shell">
     <header className="topbar wrap">
       <Link className="brand" href="/" aria-label="Lo-lyfe home"><span className="brand-mark">lo<span>✳</span></span><span className="brand-word">lo-lyfe<span className="brand-dot">.</span></span></Link>
-      <nav aria-label="Main navigation"><a className="nav-active" href="#explore">Explore</a><a href="#how-it-works">How it works</a><a href="https://github.com/jcltd303-hub/lo-lyfe/issues" target="_blank" rel="noopener noreferrer">Roadmap ↗</a></nav>
+      <nav aria-label="Main navigation"><a className="nav-active" href="#explore">Explore</a><a href="#how-it-works">How it works</a><Link href="/account">Account</Link><a href="https://github.com/jcltd303-hub/lo-lyfe/issues" target="_blank" rel="noopener noreferrer">Roadmap ↗</a></nav>
       <a className="top-cta" href="#explore">Explore finds <span>↗</span></a>
     </header>
 
@@ -44,14 +66,15 @@ export default function Home() {
 
       <section className="ticker" aria-label="Opportunity types"><div className="ticker-inner">GOOD FINDS <span>✳</span> REAL POSSIBILITIES <span>✳</span> MORE FOR YOUR EVERYDAY <span>✳</span> GOOD FINDS <span>✳</span> REAL POSSIBILITIES <span>✳</span></div></section>
 
-      <section className="explore wrap" id="explore"><div className="section-heading"><div><div className="overline">01 / THE EXPLORE PAGE</div><h2>Find your kind<br/>of <em>good.</em></h2></div><p>A first look at how Lo-lyfe will work. These are example listings while we build and verify the real catalog.</p></div>
-        <div className="demo-alert"><span>✳</span><div><strong>Preview catalog</strong><p>Every listing below is illustrative. No live offers or application links are available yet. Never share personal details for a sample listing.</p></div></div>
+      <section className="explore wrap" id="explore"><div className="section-heading"><div><div className="overline">01 / THE EXPLORE PAGE</div><h2>Find your kind<br/>of <em>good.</em></h2></div><p>{catalogState === 'sample' ? 'A first look at how Lo-lyfe will work. These are example listings while we build and verify the real catalog.' : 'Browse reviewed listings and check the official terms before applying.'}</p></div>
+        {catalogState === 'sample' && <div className="demo-alert"><span>✳</span><div><strong>Preview catalog</strong><p>Every listing below is illustrative. No live offers or application links are available yet. Never share personal details for a sample listing.</p></div></div>}
+        {catalogState === 'error' && <div role="alert">The reviewed catalog is unavailable. Please try again later.</div>}
         <div className="filter-panel"><div className="search-row"><label className="search-box"><span aria-hidden="true">⌕</span><span className="sr-only">Search opportunities</span><input value={query} onChange={event => setQuery(event.target.value)} placeholder="Search the good stuff..." /></label><label className="state-box">Your state <select value={state} onChange={event => setState(event.target.value)}><option value="">Any state</option><option value="CO">Colorado</option><option value="CA">California</option><option value="NY">New York</option><option value="TX">Texas</option></select></label><label className="age-box">Age <input type="number" min="0" max="120" value={age} onChange={event => setAge(event.target.value)} placeholder="Optional" /></label></div>
           <div className="category-row" role="group" aria-label="Categories">{categories.map(c => <button key={c.id} type="button" className={`category ${category === c.id ? 'selected' : ''}`} aria-pressed={category === c.id} onClick={() => setCategory(c.id)}><span>{c.icon}</span>{c.label}</button>)}</div>
           <label className="possible-toggle"><input type="checkbox" checked={onlyPossible} onChange={event => setOnlyPossible(event.target.checked)} /> Show only possible matches <small>Based on the details you enter here. Never a guarantee.</small></label>
         </div>
-        <div className="results-heading"><h3>Fresh possibilities <span>({items.length})</span></h3><span>EXAMPLE LISTINGS · NOT LIVE</span></div>
-        <div className="cards">{items.map((item, index) => { const status = evaluateEligibility(item, { state, age: age ? Number(age) : undefined }); return <article className="card" key={item.id}><div className="card-top"><span className="card-icon">{categories.find(c => c.id === item.category)?.icon}</span><span className="sample-tag">EXAMPLE {String(index + 1).padStart(2, '0')}</span></div><div className="card-meta">{item.category.toUpperCase()} <span>·</span> {item.location.toUpperCase()}</div><h4>{item.title}</h4><p>{item.summary}</p><div className="card-requirements">{item.requirements.map(r => <span key={r}>{r}</span>)}</div><div className="card-footer"><div><small>POTENTIAL VALUE</small><strong>{item.amount}</strong></div><span className={`match ${status}`}>{status === 'possible' ? 'Potential match' : status === 'ineligible' ? 'Location / age mismatch' : 'More info needed'}</span></div></article>; })}</div>
+        <div className="results-heading"><h3>Fresh possibilities <span>({items.length})</span></h3><span>{catalogState === 'sample' ? 'EXAMPLE LISTINGS · NOT LIVE' : 'REVIEWED CATALOG'}</span></div>
+        <div className="cards">{items.map((item, index) => { const status = evaluateEligibility(item, { state, age: age ? Number(age) : undefined }); return <article className="card" key={item.id}><div className="card-top"><span className="card-icon">{categories.find(c => c.id === item.category)?.icon}</span><span className="sample-tag">{catalogState === 'sample' ? `EXAMPLE ${String(index + 1).padStart(2, '0')}` : 'REVIEWED'}</span></div><div className="card-meta">{item.category.toUpperCase()} <span>·</span> {item.location.toUpperCase()}</div><h4>{item.title}</h4><p>{item.summary}</p><div className="card-requirements">{item.requirements.map(r => <span key={r}>{r}</span>)}</div><div className="card-footer"><div><small>POTENTIAL VALUE</small><strong>{item.amount}</strong></div><span className={`match ${status}`}>{status === 'possible' ? 'Potential match' : status === 'ineligible' ? 'Location / age mismatch' : 'More info needed'}</span></div>{catalogState === 'live' && <a href={item.url} target="_blank" rel="noopener noreferrer">View official claim page ↗</a>}</article>; })}</div>
         {items.length === 0 && <div className="empty"><span>✳</span><h4>No examples found</h4><p>Try another search or clear a filter.</p><button type="button" onClick={() => {setQuery('');setState('');setCategory('all');setOnlyPossible(false);setAge('');}}>Clear filters</button></div>}
       </section>
 
