@@ -10,3 +10,8 @@ test('maps approved listing and rules without profile data', () => {
   assert.equal(item.url, 'https://example.gov/claim');
   assert.equal('profile' in item, false);
 });
+
+test('maps a source returned as an embedded array', () => {
+  const row = { id: 'listing', title: 'Refund', summary: 'Test', category: 'refund', claim_url: 'https://example.gov/claim', deadline: '2099-01-01', payout_description: null, proof_required: [], sources: [{ name: 'Official' }], eligibility_rules: [] };
+  assert.equal(mapPublishedRow(row).provider, 'Official');
+});
