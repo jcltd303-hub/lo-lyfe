@@ -1,0 +1,1 @@
+import assert from'node:assert/strict';import{test}from'node:test';import{scamSignals}from'../src/scam.ts';test('flags fee and lookalike domains',()=>{const r=scamSignals({text:'Pay a processing fee to receive your claim',claimUrl:'https://example.net/a',officialHosts:['agency.gov']});assert.deepEqual(r.map(x=>x.kind),['fee_required','lookalike_domain'])});
