@@ -17,14 +17,19 @@ export default function ProfilePage() {
 
   useEffect(() => {
     let active = true;
-    async function load() {
+    let generation = 0;
+    const client = createClient();
+    async function load(id: string | null) {
+      const current = ++generation;
+      setUserId(null);
+      setForm(blank);
+      setMessage('');
+      setState(id ? 'loading' : 'unavailable');
+      if (!id) return;
       try {
-        const { data: { user } } = await createClient().auth.getUser();
-        if (!active) return;
-        if (!user) { setState('unavailable'); return; }
-        setUserId(user.id);
-        const saved = await vault.readProfile(user.id);
-        if (!active) return;
+        const saved = await vault.readProfile(id);
+        if (!active || current !== generation) return;
+        setUserId(id);
         if (saved) setForm({
           zip: String(saved.zip ?? ''),
           birthYear: String(saved.birth_year ?? ''),
@@ -33,11 +38,16 @@ export default function ProfilePage() {
         });
         setState('ready');
       } catch (error) {
-        if (active) setState(error instanceof VaultCorruptError ? 'corrupt' : 'unavailable');
+        if (active && current === generation) { setUserId(id); setState(error instanceof VaultCorruptError ? 'corrupt' : 'unavailable'); }
       }
     }
-    void load();
-    return () => { active = false; setForm(blank); };
+    const { data: { subscription } } = client.auth.onAuthStateChange((_event, session) => {
+      setTimeout(() => { if (active) void load(session?.user.id ?? null); }, 0);
+    });
+    void client.auth.getUser().then(({ data: { user } }) => {
+      if (active) void load(user?.id ?? null);
+    }).catch(() => { if (active) void load(null); });
+    return () => { active = false; generation++; subscription.unsubscribe(); };
   }, []);
 
   async function save(event: FormEvent<HTMLFormElement>) {
