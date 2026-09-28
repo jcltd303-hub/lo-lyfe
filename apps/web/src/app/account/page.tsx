@@ -12,6 +12,7 @@ export default function AccountPage() {
   const [claims, setClaims] = useState<Claim[]>([]);
   const [attested, setAttested] = useState<string[]>([]);
   const [deleteText, setDeleteText] = useState('');
+  const [payoutAmounts, setPayoutAmounts] = useState<Record<string,string>>({});
 
   useEffect(() => {
     let active = true;
@@ -80,6 +81,14 @@ export default function AccountPage() {
     setMessage(`Claim marked ${status}.`);
   }
 
+  async function logPayout(claimId: string) {
+    const dollars = Number(payoutAmounts[claimId]);
+    if (!Number.isFinite(dollars) || dollars < 0) { setMessage('Enter a valid payout amount.'); return; }
+    const amountCents = Math.round(dollars * 100);
+    const response = await fetch('/api/payouts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ claimId, amountCents }) });
+    setMessage(response.ok ? 'Payout logged.' : 'Could not log payout.');
+  }
+
   async function deleteAccount() {
     if (!userId || deleteText !== 'DELETE MY ACCOUNT') return;
     const id = userId;
@@ -115,6 +124,7 @@ export default function AccountPage() {
           {opportunity?.claim_url && <a href={opportunity.claim_url} target="_blank" rel="noopener noreferrer">Review and apply at the official site ↗</a>}
           {claim.status === 'submitted' && <button type="button" onClick={() => void updateStatus(claim.id, 'pending')}>Mark pending</button>}
           {claim.status === 'pending' && <div><button type="button" onClick={() => void updateStatus(claim.id, 'paid')}>Mark paid</button><button type="button" onClick={() => void updateStatus(claim.id, 'rejected')}>Mark rejected</button></div>}
+          {claim.status === 'paid' && <div><label>Payout received ($) <input inputMode="decimal" value={payoutAmounts[claim.id] ?? ''} onChange={event => setPayoutAmounts(current => ({ ...current, [claim.id]: event.target.value }))} /></label><button type="button" onClick={() => void logPayout(claim.id)}>Log payout</button></div>}
           {claim.status === 'started' && <div>
             <label><input type="checkbox" checked={attested.includes(claim.id)}
               onChange={event => setAttested(current => event.target.checked ? [...current, claim.id] : current.filter(id => id !== claim.id))} />
