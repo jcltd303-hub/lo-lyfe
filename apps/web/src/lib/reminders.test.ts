@@ -1,0 +1,1 @@
+import assert from'node:assert/strict';import{test}from'node:test';import{shouldSendDeadlineReminder}from'./reminders';test('reminder window opens seven days before deadline',()=>{assert.equal(shouldSendDeadlineReminder('2026-10-10',new Date('2026-10-04T12:00:00Z')),true);assert.equal(shouldSendDeadlineReminder('2026-10-10',new Date('2026-10-01T12:00:00Z')),false)});

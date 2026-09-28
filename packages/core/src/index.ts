@@ -26,3 +26,6 @@ export { parseDiscordApi, parseRedditApi, parseTelegramBotApi } from './communit
 export { explainEligibility, rankOpportunities } from './ranking.ts';
 export { parseEligibilityRules } from './rule-parser.ts';
 export type { ParsedRule } from './rule-parser.ts';
+
+export { evaluatePrecisionAt10, precisionAtK } from './eval.ts';
+export type { EvalCase } from './eval.ts';
