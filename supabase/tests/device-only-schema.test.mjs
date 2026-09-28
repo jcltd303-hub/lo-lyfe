@@ -15,3 +15,8 @@ test('saves have owner-scoped read, insert, and delete policies', () => {
   assert.match(migration, /create policy own_saved_insert[\s\S]*?for insert to authenticated\s+with check \(user_id = \(select auth\.uid\(\)\)/i);
   assert.match(migration, /create policy own_saved_delete[\s\S]*?for delete to authenticated using \(user_id = \(select auth\.uid\(\)\)\)/i);
 });
+
+test('signup creates a minimal user row without a profile answer', () => {
+  assert.match(migration, /create trigger on_auth_user_created[\s\S]*?after insert on auth\.users/i);
+  assert.match(migration, /insert into public\.users\s*\(id\)\s*values\s*\(new\.id\)/i);
+});
