@@ -9,6 +9,20 @@ create table public.users (
   updated_at timestamptz not null default now()
 );
 
+-- Keep the account row minimal. The trigger runs only for Auth signup.
+create schema if not exists private;
+revoke all on schema private from public;
+create function private.handle_new_user() returns trigger
+language plpgsql security definer set search_path = '' as $$
+begin
+  insert into public.users(id) values (new.id);
+  return new;
+end;
+$$;
+revoke all on function private.handle_new_user() from public, anon, authenticated;
+create trigger on_auth_user_created
+after insert on auth.users for each row execute function private.handle_new_user();
+
 create table public.field_definitions (
   key text primary key check (key ~ '^[a-z][a-z0-9_]{1,63}$'),
   label text not null,
