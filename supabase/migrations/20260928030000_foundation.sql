@@ -19,20 +19,6 @@ create table public.field_definitions (
   constraint prohibited_field check (key !~* '(ssn|social_security|bank|routing|account_number|credit_card)')
 );
 
-create table public.profile_values (
-  user_id uuid not null references public.users(id) on delete cascade,
-  field_key text not null references public.field_definitions(key),
-  plain_value jsonb,
-  encrypted_value bytea,
-  encryption_version text,
-  updated_at timestamptz not null default now(),
-  primary key (user_id, field_key),
-  constraint exactly_one_value check (
-    (plain_value is not null and encrypted_value is null and encryption_version is null)
-    or (plain_value is null and encrypted_value is not null and encryption_version is not null)
-  )
-);
-
 create table public.sources (
   id uuid primary key default gen_random_uuid(),
   name text not null,
@@ -65,6 +51,14 @@ create table public.opportunities (
   constraint published_requires_review check (status <> 'published' or reviewed_at is not null)
 );
 create index opportunities_public_idx on public.opportunities (category, deadline) where status = 'published';
+
+create table public.saved_opportunities (
+  user_id uuid not null references public.users(id) on delete cascade,
+  opportunity_id uuid not null references public.opportunities(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (user_id, opportunity_id)
+);
+create index saved_opportunities_user_idx on public.saved_opportunities(user_id, created_at desc);
 
 create table public.opportunity_versions (
   id bigint generated always as identity primary key,
@@ -123,7 +117,7 @@ on conflict (key) do nothing;
 
 alter table public.users enable row level security;
 alter table public.field_definitions enable row level security;
-alter table public.profile_values enable row level security;
+alter table public.saved_opportunities enable row level security;
 alter table public.sources enable row level security;
 alter table public.opportunities enable row level security;
 alter table public.opportunity_versions enable row level security;
@@ -145,10 +139,14 @@ using (active and exists (
 ));
 create policy field_schema_read on public.field_definitions for select to authenticated using (true);
 
--- Client writes to profile_values/claims must go through authenticated server operations.
--- The server validates fields, encrypts sensitive values, and records attestation.
+-- Profile answers live on the user's device. Claims use authenticated server operations.
 create policy own_user_read on public.users for select to authenticated using (id = (select auth.uid()));
-create policy own_profile_read on public.profile_values for select to authenticated using (user_id = (select auth.uid()));
+create policy own_saved_read on public.saved_opportunities for select to authenticated using (user_id = (select auth.uid()));
+create policy own_saved_insert on public.saved_opportunities for insert to authenticated
+with check (user_id = (select auth.uid()) and exists (
+  select 1 from public.opportunities o where o.id = opportunity_id
+));
+create policy own_saved_delete on public.saved_opportunities for delete to authenticated using (user_id = (select auth.uid()));
 create policy own_claim_read on public.claims for select to authenticated using (user_id = (select auth.uid()));
 create policy own_payout_read on public.payouts for select to authenticated using (
   exists (select 1 from public.claims c where c.id = claim_id and c.user_id = (select auth.uid()))
@@ -159,6 +157,7 @@ create policy own_payout_read on public.payouts for select to authenticated usin
 revoke all on all tables in schema public from anon, authenticated;
 revoke all on all sequences in schema public from anon, authenticated;
 grant select on public.opportunities, public.eligibility_rules, public.sources to anon, authenticated;
-grant select on public.field_definitions, public.users, public.profile_values, public.claims, public.payouts to authenticated;
+grant select on public.field_definitions, public.users, public.claims, public.payouts to authenticated;
+grant select, insert, delete on public.saved_opportunities to authenticated;
 grant all on all tables in schema public to service_role;
 grant usage, select on all sequences in schema public to service_role;
