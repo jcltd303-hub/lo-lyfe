@@ -6,5 +6,5 @@ export default defineConfig([
   ...nextVitals,
   ...nextTypescript,
   { settings: { next: { rootDir: 'apps/web/' } } },
-  globalIgnores(['.next/**', 'out/**', 'node_modules/**', 'next-env.d.ts']),
+  globalIgnores(['**/.next/**', '**/.turbo/**', '**/out/**', '**/node_modules/**', '**/next-env.d.ts']),
 ]);

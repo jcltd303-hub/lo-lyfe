@@ -15,3 +15,5 @@ This preview does **not** implement Supabase, ingestion, applications, authentic
 ## Workspace
 
 `apps/web` contains the Next.js app, `packages/core` contains shared opportunity and eligibility logic, and `supabase/migrations` will contain the backend schema. See `docs/policies/source-policy.md` for source and review requirements. Database credentials and live ingestion are not configured.
+
+The shared core now includes a missing-field calculator and strict ingestion draft validator. These are offline contracts only: no crawler, verified live listing, profile persistence, or submission path is enabled.
