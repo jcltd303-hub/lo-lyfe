@@ -20,3 +20,5 @@ export type { ExtractedCandidate } from './extractors.ts';
 export { isRobotsAllowed, parseRobotsTxt } from './robots.ts';
 export type { RobotsRules } from './robots.ts';
 export { cosineSimilarity, textFeatureEmbedding } from './embedding.ts';
+
+export { parseDiscordApi, parseRedditApi, parseTelegramBotApi } from './community-connectors.ts';
