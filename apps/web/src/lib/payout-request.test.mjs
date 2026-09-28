@@ -1,0 +1,3 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {parsePayoutRequest} from './payout-request.ts';
+test('accepts safe payout input',()=>assert.deepEqual(parsePayoutRequest({claimId:'550e8400-e29b-41d4-a716-446655440000',amountCents:1250}),{claimId:'550e8400-e29b-41d4-a716-446655440000',amountCents:1250}));
+test('rejects malformed claim ids and unsafe amounts',()=>{for(const value of [{claimId:'x',amountCents:1},{claimId:'550e8400-e29b-41d4-a716-446655440000',amountCents:-1},{claimId:'550e8400-e29b-41d4-a716-446655440000',amountCents:1.5}])assert.throws(()=>parsePayoutRequest(value))});
