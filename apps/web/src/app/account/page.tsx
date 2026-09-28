@@ -10,15 +10,11 @@ export default function AccountPage() {
 
   useEffect(() => {
     let active = true;
-    try {
-      void createClient().auth.getUser().then(({ data: { user }, error }) => {
+    void Promise.resolve().then(() => createClient().auth.getUser()).then(({ data: { user }, error }) => {
         if (!active) return;
         setUserId(error ? null : user?.id ?? null);
         setMessage(error || !user ? 'Sign in to access your account.' : '');
       }).catch(() => { if (active) setMessage('Account is unavailable.'); });
-    } catch {
-      setMessage('Account is not configured yet.');
-    }
     return () => { active = false; };
   }, []);
 
