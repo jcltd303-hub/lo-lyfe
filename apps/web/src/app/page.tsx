@@ -33,23 +33,50 @@ export default function Home() {
   useEffect(() => {
     if (catalogState !== 'loading') return;
     let active = true;
-    const client = createClient();
-    void loadPublishedCatalog(client).then(items => {
+    void loadPublishedCatalog(createClient()).then(items => {
       if (active) { setCatalog(items); setCatalogState('live'); }
     }).catch(() => { if (active) setCatalogState('error'); });
-    void client.auth.getUser().then(async ({ data: { user } }) => {
-      if (!user) return;
-      if (active) setSignedIn(true);
-      const response = await fetch('/api/saves', { cache: 'no-store' });
-      if (response.ok && active) {
-        const result = await response.json() as { items: { opportunity_id: string }[] };
-        setSavedIds(result.items.map(item => item.opportunity_id));
-      }
-      const saved = await createDeviceVault(indexedDbVaultStore).readProfile(user.id);
-      if (active && typeof saved?.birth_year === 'number') setAge(String(new Date().getFullYear() - saved.birth_year));
-    }).catch(() => {});
     return () => { active = false; };
   }, [catalogState]);
+
+  useEffect(() => {
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY) return;
+    let active = true;
+    let generation = 0;
+    const client = createClient();
+    async function loadAccount(id: string | null) {
+      const current = ++generation;
+      setSignedIn(Boolean(id));
+      setSavedIds([]);
+      setAge('');
+      setState('');
+      setSaveMessage('');
+      if (!id) return;
+      try {
+        const [response, saved] = await Promise.all([
+          fetch('/api/saves', { cache: 'no-store' }),
+          createDeviceVault(indexedDbVaultStore).readProfile(id),
+        ]);
+        if (!active || current !== generation) return;
+        if (response.ok) {
+          const result = await response.json() as { items: { opportunity_id: string }[] };
+          if (active && current === generation) setSavedIds(result.items.map(item => item.opportunity_id));
+        }
+        if (active && current === generation && typeof saved?.birth_year === 'number')
+          setAge(String(new Date().getFullYear() - saved.birth_year));
+      } catch {
+        // Catalog browsing remains available when account data or device storage is unavailable.
+      }
+    }
+    const { data: { subscription } } = client.auth.onAuthStateChange((_event, session) => {
+      // Defer Supabase calls until its Auth callback completes.
+      setTimeout(() => { if (active) void loadAccount(session?.user.id ?? null); }, 0);
+    });
+    void client.auth.getUser().then(({ data: { user } }) => {
+      if (active) void loadAccount(user?.id ?? null);
+    }).catch(() => { if (active) void loadAccount(null); });
+    return () => { active = false; generation++; subscription.unsubscribe(); };
+  }, []);
   async function toggleSave(id: string) {
     const removing = savedIds.includes(id);
     const response = await fetch('/api/saves', {
