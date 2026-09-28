@@ -14,7 +14,10 @@ function decodeXml(value: string): string {
 function textTag(block: string, names: string[]): string | undefined {
   for (const name of names) {
     const match = block.match(new RegExp(`<${name}(?:\\s[^>]*)?>([\\s\\S]*?)<\\/${name}>`, 'i'));
-    if (match?.[1]) {\n      const decoded = decodeXml(match[1]);\n      return decoded.replace(/<[^>]+>/g, ' ').replace(/\\s+/g, ' ').trim();\n    }
+    if (match?.[1]) {
+      const decoded = decodeXml(match[1]);
+      return decoded.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    }
   }
 }
 
