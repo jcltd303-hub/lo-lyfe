@@ -1,0 +1,1 @@
+export function isAdminUser(userId:string|undefined|null,configured=process.env.ADMIN_USER_IDS){if(!userId||!configured)return false;return configured.split(',').map(x=>x.trim()).filter(Boolean).includes(userId)}
