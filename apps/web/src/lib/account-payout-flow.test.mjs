@@ -1,0 +1,1 @@
+import test from'node:test';import assert from'node:assert/strict';import fs from'node:fs';test('account can log payout after claim is paid',()=>{const s=fs.readFileSync(new URL('../app/account/page.tsx',import.meta.url),'utf8');assert.match(s,/\/api\/payouts/);assert.match(s,/amountCents/);assert.match(s,/claim\.status === 'paid'/)});
