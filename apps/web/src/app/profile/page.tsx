@@ -42,11 +42,14 @@ export default function ProfilePage() {
       }
     }
     const { data: { subscription } } = client.auth.onAuthStateChange((_event, session) => {
+      if (!active) return;
+      // Clear decrypted answers before any asynchronous Auth or IndexedDB work.
+      generation++;
+      setUserId(null);
+      setForm(blank);
+      setState(session?.user ? 'loading' : 'unavailable');
       setTimeout(() => { if (active) void load(session?.user.id ?? null); }, 0);
     });
-    void client.auth.getUser().then(({ data: { user } }) => {
-      if (active) void load(user?.id ?? null);
-    }).catch(() => { if (active) void load(null); });
     return () => { active = false; generation++; subscription.unsubscribe(); };
   }, []);
 
