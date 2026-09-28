@@ -69,12 +69,15 @@ export default function Home() {
       }
     }
     const { data: { subscription } } = client.auth.onAuthStateChange((_event, session) => {
-      // Defer Supabase calls until its Auth callback completes.
+      if (!active) return;
+      generation++;
+      setSignedIn(false);
+      setSavedIds([]);
+      setAge('');
+      setState('');
+      // Defer account queries until Supabase's Auth callback completes.
       setTimeout(() => { if (active) void loadAccount(session?.user.id ?? null); }, 0);
     });
-    void client.auth.getUser().then(({ data: { user } }) => {
-      if (active) void loadAccount(user?.id ?? null);
-    }).catch(() => { if (active) void loadAccount(null); });
     return () => { active = false; generation++; subscription.unsubscribe(); };
   }, []);
   async function toggleSave(id: string) {
