@@ -8,7 +8,7 @@
     "build": "turbo build",
     "lint": "eslint apps/web packages/core",
     "typecheck": "turbo typecheck",
-    "test": "node --test supabase/tests/*.test.mjs && turbo test"
+    "test": "node --test supabase/tests/*.test.mjs apps/web/src/lib/*.test.mjs && turbo test"
   },
   "devDependencies": {
     "eslint": "^9.39.5",
