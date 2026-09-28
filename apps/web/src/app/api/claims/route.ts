@@ -24,8 +24,12 @@ export async function POST(request: NextRequest) {
   let body: { opportunityId: string };
   try { body = parseSaveRequest(await request.json()); }
   catch { return NextResponse.json({ error: 'Invalid listing ID' }, { status: 400 }); }
+  const { data: opportunity, error: opportunityError } = await client.from('opportunities').select('id,deadline')
+    .eq('id', body.opportunityId).eq('status', 'published').not('reviewed_at', 'is', null).maybeSingle();
+  if (opportunityError || !opportunity || (opportunity.deadline && new Date(opportunity.deadline).getTime() < Date.now()))
+    return NextResponse.json({ error: 'Reviewed opportunity is unavailable' }, { status: 404 });
   const { data, error } = await client.from('claims')
-    .insert({ user_id: user.id, opportunity_id: body.opportunityId, status: 'started' })
+    .insert({ user_id: user.id, opportunity_id: opportunity.id, status: 'started' })
     .select('id,opportunity_id,status').single();
   if (error?.code === '23505') {
     const existing = await client.from('claims').select('id,opportunity_id,status')

@@ -1,0 +1,1 @@
+import test from'node:test';import assert from'node:assert/strict';import fs from'node:fs';test('claim start verifies reviewed published opportunity before insert',()=>{const s=fs.readFileSync(new URL('../app/api/claims/route.ts',import.meta.url),'utf8');assert.match(s,/eq\('status', 'published'\)/);assert.match(s,/not\('reviewed_at', 'is', null\)/);assert.match(s,/deadline/)});
