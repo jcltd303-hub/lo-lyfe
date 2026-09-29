@@ -43,7 +43,7 @@ export default function Home() {
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY) return;
     let active = true;
     let generation = 0;
-    let accountId: string | null = null;
+    let accountId: string | null | undefined;
     const client = createClient();
     async function loadAccount(id: string | null) {
       const current = ++generation;
