@@ -16,7 +16,7 @@ export default function AccountPage() {
   useEffect(() => {
     let active = true;
     let generation = 0;
-    let accountId: string | null = null;
+    let accountId: string | null | undefined;
     const client = createClient();
     const { data: { subscription } } = client.auth.onAuthStateChange((_event, session) => {
       if (!active) return;
