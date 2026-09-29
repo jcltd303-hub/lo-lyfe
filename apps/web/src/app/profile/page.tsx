@@ -18,7 +18,7 @@ export default function ProfilePage() {
   useEffect(() => {
     let active = true;
     let generation = 0;
-    let accountId: string | null = null;
+    let accountId: string | null | undefined;
     const client = createClient();
     async function load(id: string | null) {
       const current = ++generation;
