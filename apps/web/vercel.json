@@ -1,0 +1,20 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/ingestion",
+      "schedule": "0 13 * * *"
+    },
+    {
+      "path": "/api/cron/expire",
+      "schedule": "23 3 * * *"
+    },
+    {
+      "path": "/api/cron/dead-links",
+      "schedule": "41 4 * * *"
+    },
+    {
+      "path": "/api/cron/reminders",
+      "schedule": "7 14 * * *"
+    }
+  ]
+}
