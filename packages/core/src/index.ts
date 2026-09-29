@@ -36,3 +36,5 @@ export { scamSignals } from './scam.ts';
 export type { ScamSignal } from './scam.ts';
 
 export { disclosedReviewGuidance } from './review-disclosure.ts';
+
+export { extractCandidateFromFeedItem } from './candidate-extraction.ts';
