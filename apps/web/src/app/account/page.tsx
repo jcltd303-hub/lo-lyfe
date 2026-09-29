@@ -16,9 +16,13 @@ export default function AccountPage() {
   useEffect(() => {
     let active = true;
     let generation = 0;
+    let accountId: string | null = null;
     const client = createClient();
     const { data: { subscription } } = client.auth.onAuthStateChange((_event, session) => {
       if (!active) return;
+      const nextId = session?.user.id ?? null;
+      if (nextId === accountId) return;
+      accountId = nextId;
       const current = ++generation;
       // Remove the previous account's claims before any asynchronous work.
       setUserId(null);
