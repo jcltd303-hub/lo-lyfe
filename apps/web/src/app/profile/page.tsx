@@ -18,6 +18,7 @@ export default function ProfilePage() {
   useEffect(() => {
     let active = true;
     let generation = 0;
+    let accountId: string | null = null;
     const client = createClient();
     async function load(id: string | null) {
       const current = ++generation;
@@ -43,6 +44,9 @@ export default function ProfilePage() {
     }
     const { data: { subscription } } = client.auth.onAuthStateChange((_event, session) => {
       if (!active) return;
+      const nextId = session?.user.id ?? null;
+      if (nextId === accountId) return;
+      accountId = nextId;
       // Clear decrypted answers before any asynchronous Auth or IndexedDB work.
       generation++;
       setUserId(null);
