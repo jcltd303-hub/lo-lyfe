@@ -7,7 +7,7 @@
   "crons": [
     {
       "path": "/api/cron/ingestion",
-      "schedule": "17 * * * *"
+      "schedule": "0 13 * * *"
     },
     {
       "path": "/api/cron/expire",
