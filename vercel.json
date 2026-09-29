@@ -1,1 +1,25 @@
-{"crons":[{"path":"/api/cron/ingestion","schedule":"17 * * * *"},{"path":"/api/cron/expire","schedule":"23 3 * * *"},{"path":"/api/cron/dead-links","schedule":"41 4 * * *"},{"path":"/api/cron/reminders","schedule":"7 14 * * *"}]}
+{
+  "version": 2,
+  "framework": "nextjs",
+  "installCommand": "pnpm install --frozen-lockfile",
+  "buildCommand": "pnpm --filter @lo-lyfe/web build",
+  "outputDirectory": "apps/web/.next",
+  "crons": [
+    {
+      "path": "/api/cron/ingestion",
+      "schedule": "17 * * * *"
+    },
+    {
+      "path": "/api/cron/expire",
+      "schedule": "23 3 * * *"
+    },
+    {
+      "path": "/api/cron/dead-links",
+      "schedule": "41 4 * * *"
+    },
+    {
+      "path": "/api/cron/reminders",
+      "schedule": "7 14 * * *"
+    }
+  ]
+}
