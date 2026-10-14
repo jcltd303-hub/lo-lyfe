@@ -1,2 +1,3 @@
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';
 test('ingestion does not parse raw official-page prose as strict extraction JSON',()=>{const src=fs.readFileSync(new URL('./ingestion-worker.ts',import.meta.url),'utf8');assert.doesNotMatch(src,/parseStrictExtraction\(item\.description\)/);assert.match(src,/extractCandidate/)});
+test('two-stage deadline: snippet without a deadline falls back to a labeled article date',()=>{const src=fs.readFileSync(new URL('./ingestion-worker.ts',import.meta.url),'utf8');assert.match(src,/extractCandidateWithDeadline/);assert.match(src,/labeledOnly/);assert.match(src,/MAX_ARTICLE_FETCHES_PER_SOURCE/)});

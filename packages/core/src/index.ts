@@ -13,7 +13,7 @@ export type { FeedItem } from './connectors.ts';
 export { findLikelyDuplicate, lifecycleStatus, textSimilarity } from './dedupe.ts';
 export type { DedupeRecord } from './dedupe.ts';
 
-export { parseOfficialPage } from './official-page.ts';
+export { parseOfficialPage, htmlToText } from './official-page.ts';
 export { extractionContract, feedItemExtractionInput, parseStrictExtraction } from './extractors.ts';
 export type { ExtractedCandidate } from './extractors.ts';
 
@@ -37,4 +37,4 @@ export type { ScamSignal } from './scam.ts';
 
 export { disclosedReviewGuidance } from './review-disclosure.ts';
 
-export { extractCandidateFromFeedItem } from './candidate-extraction.ts';
+export { extractCandidateFromFeedItem, extractCandidateWithDeadline, extractDeadlineFromText, hasOpportunityCategory } from './candidate-extraction.ts';

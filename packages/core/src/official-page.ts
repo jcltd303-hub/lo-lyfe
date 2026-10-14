@@ -7,6 +7,11 @@ function text(value: string): string {
   return decodeHtml(value.replace(/<script\b[\s\S]*?<\/script>/gi,' ').replace(/<style\b[\s\S]*?<\/style>/gi,' ').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim());
 }
 
+/** Strip an HTML document down to visible text (scripts/styles removed). */
+export function htmlToText(html: string): string {
+  return text(html);
+}
+
 /** Extract bounded, visible facts and links from an already-approved public page. Network policy is enforced before this parser is called. */
 export function parseOfficialPage(html: string, pageUrl: string): FeedItem[] {
   if (html.length > 3_000_000) throw new Error('Page exceeds size limit');

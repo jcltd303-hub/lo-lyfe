@@ -1,8 +1,57 @@
-import { assertApprovedFetchUrl, classifyFetchResponse, isRobotsAllowed, parseJsonFeed, parseOfficialPage, parseRobotsTxt, parseSyndicationFeed, extractCandidateFromFeedItem, cosineSimilarity, textFeatureEmbedding, validateCandidate } from '@lo-lyfe/core';
+import { assertApprovedFetchUrl, canonicalizeClaimUrl, classifyFetchResponse, extractCandidateFromFeedItem, extractCandidateWithDeadline, extractDeadlineFromText, hasOpportunityCategory, htmlToText, isRobotsAllowed, parseJsonFeed, parseOfficialPage, parseRobotsTxt, parseSyndicationFeed, cosineSimilarity, textFeatureEmbedding, validateCandidate } from '@lo-lyfe/core';
+import type { Candidate, FeedItem } from '@lo-lyfe/core';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 type Row={id:string;name:string;source_type:string;base_url:string;crawl_interval_minutes:number;allowed_hosts:string[];etag:string|null;consecutive_failures:number};
 const UA='lo-lyfe-bot/1.0 (+https://github.com/jcltd303-hub/lo-lyfe)';
+/** Article fetches per source per run: bounds added latency and outbound traffic. */
+const MAX_ARTICLE_FETCHES_PER_SOURCE=10;
+
+/**
+ * Stage 2: the feed snippet had no deadline (feed snippets almost never carry
+ * a claim deadline — the date lives on the linked article). Fetch the article
+ * and take a deadline-LABELED date from it (Claim Form Deadline, file-by,
+ * comment-due). Bare dates are never accepted here, so a publication or
+ * hearing date cannot become a fake claim deadline. Any failure skips the
+ * item only, never the source. Stage 2 fixes the missing-deadline case only:
+ * category/title/summary still come from the feed item itself.
+ */
+async function tryArticleDeadline(admin:SupabaseClient,source:Row,item:FeedItem,budget:{used:number}):Promise<Candidate|null>{
+  if(budget.used>=MAX_ARTICLE_FETCHES_PER_SOURCE)return null;
+  const title=item.title?.trim(),body=item.description?.trim(),rawUrl=item.link?.trim();
+  if(!title||!body||!rawUrl)return null;
+  if(extractDeadlineFromText(body))return null; // snippet had a date: extractor failed for another reason
+  if(!hasOpportunityCategory(`${title} ${body}`))return null;
+  let articleUrl:URL;
+  try{
+    articleUrl=new URL(rawUrl);
+    if(articleUrl.protocol!=='https:')return null;
+    const host=articleUrl.hostname.toLowerCase();
+    if(!source.allowed_hosts.some(h=>host===h.toLowerCase()))return null; // never fetch an unapproved host; validateCandidate enforces this too
+  }catch{return null}
+  // Skip articles already in the catalog before spending a fetch on them.
+  try{
+    const canonical=canonicalizeClaimUrl(articleUrl.href);
+    const dup=await admin.from('opportunities').select('id').eq('canonical_url',canonical).in('status',['review','published']).limit(1);
+    if((dup.data??[]).length>0)return null;
+  }catch{/* fall through: the article fetch still decides */}
+  budget.used++;
+  try{
+    const robotsUrl=new URL('/robots.txt',articleUrl).href;
+    const rr=await fetch(robotsUrl,{headers:{'User-Agent':UA},signal:AbortSignal.timeout(10000)});
+    if(rr.ok){const rules=parseRobotsTxt((await rr.text()).slice(0,500001));if(!isRobotsAllowed(articleUrl.href,rules))return null}
+    const res=await fetch(articleUrl,{headers:{'User-Agent':UA,'Accept':'text/html;q=0.8'},redirect:'follow',signal:AbortSignal.timeout(10000)});
+    if(res.status<200||res.status>=300)return null;
+    // Redirects are allowed for articles (www/trailing-slash hops are common),
+    // but the final landing host must still be an approved one.
+    try{const finalHost=new URL(res.url).hostname.toLowerCase();if(!source.allowed_hosts.some(h=>finalHost===h.toLowerCase()))return null}catch{return null}
+    const articleText=htmlToText((await res.text()).slice(0,500001));
+    const deadline=extractDeadlineFromText(articleText,{labeledOnly:true});
+    if(!deadline)return null;
+    return extractCandidateWithDeadline(item,deadline);
+  }catch{return null}
+}
+
 export async function ingestSource(admin:SupabaseClient,source:Row){
  const started=new Date().toISOString();const run=await admin.from('ingestion_runs').insert({source_id:source.id,started_at:started}).select('id').single();if(run.error)throw run.error;
  try{
@@ -13,7 +62,7 @@ export async function ingestSource(admin:SupabaseClient,source:Row){
   const res=await fetch(target,{headers,redirect:'error',signal:AbortSignal.timeout(15000)});const decision=classifyFetchResponse(res.status,{etag:res.headers.get('etag')??undefined,'retry-after':res.headers.get('retry-after')??undefined},new Date(),source.consecutive_failures);
   if(decision.action!=='ingest'){const next=decision.action==='retry'?decision.retryAt:new Date(Date.now()+source.crawl_interval_minutes*60000).toISOString();await admin.from('sources').update({last_crawled_at:new Date().toISOString(),next_crawl_at:next,etag:'etag'in decision?decision.etag??source.etag:source.etag,consecutive_failures:decision.action==='retry'?source.consecutive_failures+1:0,...(decision.action==='disable'?{active:false,disabled_reason:'HTTP access disabled'}:{})}).eq('id',source.id);await admin.from('ingestion_runs').update({finished_at:new Date().toISOString(),outcome:decision.action,http_status:res.status,retry_at:decision.action==='retry'?decision.retryAt:null}).eq('id',run.data.id);return {accepted:0}}
   const raw=(await res.text()).slice(0,3000001);const ct=res.headers.get('content-type')??'';const items=ct.includes('json')?parseJsonFeed(raw):ct.includes('xml')||source.source_type==='rss'?parseSyndicationFeed(raw):parseOfficialPage(raw,target.href);
-  let accepted=0;for(const item of items){if(!item.description)continue;try{const extracted=extractCandidateFromFeedItem(item);if(!extracted)continue;const draft=validateCandidate(extracted,{id:source.id,allowedHosts:source.allowed_hosts});const existing=await admin.from('opportunities').select('id,title,summary,eligibility_text,canonical_url').in('status',['review','published']).limit(200);const vector=textFeatureEmbedding(`${draft.title} ${draft.summary} ${draft.eligibilityText}`);if((existing.data??[]).some(x=>x.canonical_url===draft.canonicalUrl||cosineSimilarity(vector,textFeatureEmbedding(`${x.title} ${x.summary} ${x.eligibility_text}`))>=0.92))continue;const ins=await admin.from('opportunities').insert({source_id:source.id,title:draft.title,summary:draft.summary,category:draft.category,claim_url:draft.claimUrl,canonical_url:draft.canonicalUrl,eligibility_text:draft.eligibilityText,deadline:draft.deadline,proof_required:draft.proofRequired,status:'review',content_embedding:vector,embedding_model:'lo-lyfe-feature-v1',embedded_at:new Date().toISOString()});if(!ins.error)accepted++}catch{/* unstructured/invalid facts stay out of catalog */}}
+  let accepted=0;const budget={used:0};for(const item of items){if(!item.description)continue;try{let extracted=extractCandidateFromFeedItem(item);if(!extracted)extracted=await tryArticleDeadline(admin,source,item,budget);if(!extracted)continue;const draft=validateCandidate(extracted,{id:source.id,allowedHosts:source.allowed_hosts});const existing=await admin.from('opportunities').select('id,title,summary,eligibility_text,canonical_url').in('status',['review','published']).limit(200);const vector=textFeatureEmbedding(`${draft.title} ${draft.summary} ${draft.eligibilityText}`);if((existing.data??[]).some(x=>x.canonical_url===draft.canonicalUrl||cosineSimilarity(vector,textFeatureEmbedding(`${x.title} ${x.summary} ${x.eligibility_text}`))>=0.92))continue;const ins=await admin.from('opportunities').insert({source_id:source.id,title:draft.title,summary:draft.summary,category:draft.category,claim_url:draft.claimUrl,canonical_url:draft.canonicalUrl,eligibility_text:draft.eligibilityText,deadline:draft.deadline,proof_required:draft.proofRequired,status:'review',content_embedding:vector,embedding_model:'lo-lyfe-feature-v1',embedded_at:new Date().toISOString()});if(!ins.error)accepted++}catch{/* unstructured/invalid facts stay out of catalog */}}
   const next=new Date(Date.now()+source.crawl_interval_minutes*60000).toISOString();await admin.from('sources').update({last_crawled_at:new Date().toISOString(),next_crawl_at:next,etag:res.headers.get('etag'),consecutive_failures:0,last_yield:accepted,robots_checked_at:new Date().toISOString()}).eq('id',source.id);await admin.from('ingestion_runs').update({finished_at:new Date().toISOString(),outcome:'success',http_status:res.status,candidates_found:items.length,candidates_accepted:accepted}).eq('id',run.data.id);return{accepted}
  }catch(e){const code=e instanceof Error?e.message.slice(0,120):'UNKNOWN';const now=new Date();if(code==='ROBOTS_DENIED'){await admin.from('ingestion_runs').update({finished_at:now.toISOString(),outcome:'disabled',error_code:code}).eq('id',run.data.id);await admin.from('sources').update({active:false,disabled_reason:'robots.txt disallows crawling',robots_checked_at:now.toISOString()}).eq('id',source.id);return{accepted:0,error:code}}if(source.consecutive_failures>=4){await admin.from('ingestion_runs').update({finished_at:now.toISOString(),outcome:'disabled',error_code:code}).eq('id',run.data.id);await admin.from('sources').update({active:false,disabled_reason:`Repeated failures: ${code}`,last_crawled_at:now.toISOString(),robots_checked_at:now.toISOString()}).eq('id',source.id);return{accepted:0,error:code}}const retryAt=new Date(now.getTime()+Math.min(60,2**Math.max(0,source.consecutive_failures))*60_000).toISOString();await admin.from('sources').update({last_crawled_at:now.toISOString(),next_crawl_at:retryAt,consecutive_failures:source.consecutive_failures+1}).eq('id',source.id);await admin.from('ingestion_runs').update({finished_at:now.toISOString(),outcome:'retry',error_code:code,retry_at:retryAt}).eq('id',run.data.id);return{accepted:0,error:code}}
 }
