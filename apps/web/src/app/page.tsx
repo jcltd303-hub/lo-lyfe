@@ -152,6 +152,6 @@ export default function Home() {
       </section>
 
       <section className="how" id="how-it-works"><div className="wrap how-inner"><div><div className="overline">02 / THE IDEA</div><h2>A better way<br/>to <em>find more.</em></h2><p>Good opportunities shouldn’t be buried in a hundred tabs. We’re building a simpler way to find them and understand the requirements.</p></div><div className="steps"><div><span>01</span><strong>Explore</strong><p>See opportunities from sources we can verify.</p></div><div><span>02</span><strong>Check your fit</strong><p>Use clear rules to spot potential matches. You decide what to share.</p></div><div><span>03</span><strong>Apply yourself</strong><p>Review the official terms and attest before any submission.</p></div></div></div></section>
-    </main><footer className="footer wrap"><div className="brand-word">lo-lyfe<span className="brand-dot">.</span></div><p>Find the good in what’s out there.</p><span>© 2026 LO-LYFE · PREVIEW</span></footer>
+    </main><footer className="footer wrap"><div className="brand-word">lo-lyfe<span className="brand-dot">.</span></div><p>Find the good in what’s out there.</p><a href="https://cash.app/$TrapHouseLTD" target="_blank" rel="noopener noreferrer" style={{fontSize:12,color:'#73867a'}}>Found money? Tip the builder. ↗</a><span>© 2026 LO-LYFE · PREVIEW</span></footer>
   </div>;
 }
