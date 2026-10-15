@@ -26,6 +26,18 @@ test('nonofficial or unsafe destinations cannot enter review', () => {
     assert.throws(() => validateCandidate({ ...candidate, claimUrl }, source), /claim URL|source/i);
   }
 });
+test('directory mode accepts .gov and unclaimed.org destinations, still rejects commercial ones', () => {
+  const dirSource = { id: 'usagov', allowedHosts: ['www.usa.gov'] };
+  const now = new Date('2026-09-28T12:00:00Z');
+  // Without the flag, even a .gov destination is rejected (existing behavior).
+  assert.throws(() => validateCandidate({ ...candidate, claimUrl: 'https://www.irs.gov/refunds' }, dirSource, now), /outside/i);
+  // With the flag, .gov + NAUPA pass, commercial hosts still fail.
+  assert.equal(validateCandidate({ ...candidate, claimUrl: 'https://www.irs.gov/refunds' }, dirSource, now, { allowGovHosts: true }).canonicalUrl, 'https://www.irs.gov/refunds');
+  assert.equal(validateCandidate({ ...candidate, claimUrl: 'https://unclaimed.org/' }, dirSource, now, { allowGovHosts: true }).canonicalUrl, 'https://unclaimed.org/');
+  assert.throws(() => validateCandidate({ ...candidate, claimUrl: 'https://example.com/claim' }, dirSource, now, { allowGovHosts: true }), /outside/i);
+  // A .gov-looking suffix on a commercial domain does not pass.
+  assert.throws(() => validateCandidate({ ...candidate, claimUrl: 'https://irs.gov.evil.com/claim' }, dirSource, now, { allowGovHosts: true }), /outside/i);
+});
 test('canonicalization removes tracking but preserves claim parameters', () => {
   assert.equal(canonicalizeClaimUrl('https://refunds.example.gov/claim?id=42&gclid=abc&utm_campaign=x#top'), 'https://refunds.example.gov/claim?id=42');
 });

@@ -51,7 +51,7 @@ export function canonicalizeClaimUrl(raw: string): string {
 }
 
 /** Validate an extracted record before human review. This does not publish it. */
-export function validateCandidate(candidate: Candidate, source: Source, now = new Date()): ReviewDraft {
+export function validateCandidate(candidate: Candidate, source: Source, now = new Date(), opts?: { allowGovHosts?: boolean }): ReviewDraft {
   if (!candidate.title?.trim() || !candidate.summary?.trim() || !candidate.eligibilityText?.trim()) {
     throw new Error('Title, summary, and eligibility are required');
   }
@@ -64,7 +64,12 @@ export function validateCandidate(candidate: Candidate, source: Source, now = ne
   if (candidate.deadline < now.toISOString().slice(0, 10)) throw new Error('Expired opportunity');
   const canonicalUrl = canonicalizeClaimUrl(candidate.claimUrl);
   const host = new URL(canonicalUrl).hostname.toLowerCase();
-  if (!source.allowedHosts.some(allowed => host === allowed.toLowerCase())) {
+  // Directory pages (e.g. USA.gov's unclaimed-money page) link OUT to the
+  // opportunities: any .gov destination is an official source, plus
+  // unclaimed.org — NAUPA, the national unclaimed-property association and
+  // the directory's gateway to the state programs.
+  const govHostOk = opts?.allowGovHosts === true && (host.endsWith('.gov') || host === 'unclaimed.org');
+  if (!govHostOk && !source.allowedHosts.some(allowed => host === allowed.toLowerCase())) {
     throw new Error('Claim URL is outside the approved source');
   }
   if (!source.id.trim()) throw new Error('Source ID required');
