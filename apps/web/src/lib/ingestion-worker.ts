@@ -1,4 +1,4 @@
-import { assertApprovedFetchUrl, canonicalizeClaimUrl, classifyFetchResponse, extractCandidateFromFeedItem, extractCandidateWithDeadline, extractDeadlineFromText, hasOpportunityCategory, htmlToText, isRobotsAllowed, parseJsonFeed, parseOfficialPage, parseRobotsTxt, parseSyndicationFeed, cosineSimilarity, textFeatureEmbedding, validateCandidate } from '@lo-lyfe/core';
+import { assertApprovedFetchUrl, canonicalizeClaimUrl, classifyFetchResponse, extractCandidateFromFeedItem, extractCandidateWithDeadline, htmlToText, isRobotsAllowed, parseJsonFeed, parseOfficialPage, parseRobotsTxt, parseSyndicationFeed, cosineSimilarity, textFeatureEmbedding, validateCandidate } from '@lo-lyfe/core';
 import type { Candidate, FeedItem } from '@lo-lyfe/core';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
@@ -8,20 +8,20 @@ const UA='lo-lyfe-bot/1.0 (+https://github.com/jcltd303-hub/lo-lyfe)';
 const MAX_ARTICLE_FETCHES_PER_SOURCE=10;
 
 /**
- * Stage 2: the feed snippet had no deadline (feed snippets almost never carry
- * a claim deadline — the date lives on the linked article). Fetch the article
- * and take a deadline-LABELED date from it (Claim Form Deadline, file-by,
- * comment-due). Bare dates are never accepted here, so a publication or
- * hearing date cannot become a fake claim deadline. Any failure skips the
- * item only, never the source. Stage 2 fixes the missing-deadline case only:
- * category/title/summary still come from the feed item itself.
+ * Stage 2: the feed snippet failed stage 1 (no deadline, or no category
+ * keyword in the snippet). Fetch the article and take a deadline-LABELED
+ * date from it (Claim Form Deadline, file-by, comment-due). Bare dates are
+ * never accepted here, so a publication or hearing date cannot become a
+ * fake claim deadline. Category may come from the snippet or the head of
+ * the article. Any failure skips the item only, never the source.
  */
 async function tryArticleDeadline(admin:SupabaseClient,source:Row,item:FeedItem,budget:{used:number}):Promise<Candidate|null>{
   if(budget.used>=MAX_ARTICLE_FETCHES_PER_SOURCE)return null;
   const title=item.title?.trim(),body=item.description?.trim(),rawUrl=item.link?.trim();
   if(!title||!body||!rawUrl)return null;
-  if(extractDeadlineFromText(body))return null; // snippet had a date: extractor failed for another reason
-  if(!hasOpportunityCategory(`${title} ${body}`))return null;
+  // No snippet-deadline or snippet-category gate here: stage 2 also rescues
+  // items whose snippet has a date but no category keyword, since category
+  // may come from the article head. The fetch budget still bounds volume.
   let articleUrl:URL;
   try{
     articleUrl=new URL(rawUrl);
@@ -48,7 +48,8 @@ async function tryArticleDeadline(admin:SupabaseClient,source:Row,item:FeedItem,
     const articleText=htmlToText((await res.text()).slice(0,500001));
     const deadline=extractDeadlineFromText(articleText,{labeledOnly:true});
     if(!deadline)return null;
-    return extractCandidateWithDeadline(item,deadline);
+    // Category from snippet + article head (own intro, not sidebar boilerplate).
+    return extractCandidateWithDeadline(item,deadline,`${title} ${body} ${articleText.slice(0,3000)}`);
   }catch{return null}
 }
 

@@ -45,3 +45,32 @@ test('candidate with a supplied article deadline keeps the feed item fields', ()
   assert.equal(out?.category, 'settlement');
   assert.equal(out?.claimUrl, 'https://agency.gov/settlement');
 });
+
+// Widened category vocabulary (matches the catalog's own conventions).
+test('rebate and reimbursement classify as refund', () => {
+  assert.equal(extractCandidateFromFeedItem({ title: 'Energy rebate', link: 'https://agency.gov/rebate', description: 'Get a rebate on qualifying purchases. Deadline: December 31, 2026.' })?.category, 'refund');
+  assert.equal(extractCandidateFromFeedItem({ title: 'Medical reimbursement', link: 'https://agency.gov/reimburse', description: 'Request reimbursement for covered costs. Deadline: December 31, 2026.' })?.category, 'refund');
+});
+test('unclaimed money classifies as refund, like the seed catalog', () => {
+  assert.equal(extractCandidateFromFeedItem({ title: 'Unclaimed property', link: 'https://agency.gov/unclaimed', description: 'Search for your unclaimed money. No deadline.' })?.category ?? null, null); // no deadline → still null
+  assert.equal(extractCandidateFromFeedItem({ title: 'Unclaimed property', link: 'https://agency.gov/unclaimed', description: 'Search for your unclaimed money. Claim by December 31, 2026.' })?.category, 'refund');
+});
+test('compensation fund classifies as settlement; bare executive compensation does not', () => {
+  assert.equal(extractCandidateFromFeedItem({ title: 'Victim compensation fund', link: 'https://agency.gov/fund', description: 'The compensation fund pays eligible victims. Deadline: December 31, 2026.' })?.category, 'settlement');
+  assert.equal(extractCandidateFromFeedItem({ title: 'CEO compensation report', link: 'https://agency.gov/report', description: 'Annual report on executive compensation. Published December 31, 2026.' }), null);
+});
+test('assistance program classifies as grant; boilerplate assistance does not', () => {
+  assert.equal(extractCandidateFromFeedItem({ title: 'Energy assistance program', link: 'https://agency.gov/energy', description: 'Apply to the energy assistance program. Deadline: December 31, 2026.' })?.category, 'grant');
+  assert.equal(extractCandidateFromFeedItem({ title: 'Public hearing', link: 'https://agency.gov/hearing', description: 'For assistance, contact the clerk. Hearing January 15, 2027.' }), null);
+});
+test('voucher classifies as coupon', () => {
+  assert.equal(extractCandidateFromFeedItem({ title: 'Food voucher', link: 'https://agency.gov/voucher', description: 'Redeem your voucher. Expires December 31, 2026. Deadline: December 31, 2026.' })?.category, 'coupon');
+});
+test('category may come from the article head when the snippet lacks one', () => {
+  const out = extractCandidateWithDeadline(
+    { title: 'City program update', link: 'https://agency.gov/program', description: 'The city announced a new program for residents.' },
+    '2026-12-31',
+    'City program update The city announced a new program for residents. Energy assistance program applications open now.',
+  );
+  assert.equal(out?.category, 'grant');
+});

@@ -72,27 +72,34 @@ export function extractDeadlineFromText(
 }
 
 export function hasOpportunityCategory(text: string): boolean {
-  const lower = text.toLowerCase();
-  return (
-    lower.includes('settlement') ||
-    lower.includes('refund') ||
-    lower.includes('grant') ||
-    lower.includes('coupon') ||
-    /\bfree(?:bie|bies| item| sample)?\b/.test(lower)
-  );
+  return categorize(text) !== null;
 }
 
+/**
+ * Category vocabulary. Deliberately wider than the original five words:
+ * rebates/reimbursements/unclaimed money are refunds in this catalog's own
+ * convention (the seed files unclaimed property under 'refund'), compensation
+ * funds are settlements, assistance programs are grants, vouchers are coupons.
+ * Deliberately NOT included: 'payout' (CEO payouts, lottery payouts),
+ * 'benefits' (too broad), bare 'class action' (an investigation is not a
+ * settlement). Order matters: check settlement before refund, etc.
+ */
 function categorize(text: string): Candidate['category'] | null {
   const lower = text.toLowerCase();
-  if (lower.includes('settlement')) return 'settlement';
-  if (lower.includes('refund')) return 'refund';
-  if (lower.includes('grant')) return 'grant';
-  if (lower.includes('coupon')) return 'coupon';
+  if (lower.includes('settlement') || /compensation\s+(fund|program|settlement|claims?)\b/.test(lower)) return 'settlement';
+  if (
+    lower.includes('refund') ||
+    lower.includes('rebate') ||
+    lower.includes('reimbursement') ||
+    lower.includes('unclaimed')
+  ) return 'refund';
+  if (lower.includes('grant') || /assistance\s+(programs?|fund|benefits)\b/.test(lower)) return 'grant';
+  if (lower.includes('coupon') || lower.includes('voucher')) return 'coupon';
   if (/\bfree(?:bie|bies| item| sample)?\b/.test(lower)) return 'freebie';
   return null;
 }
 
-function baseCandidate(item: FeedItem): {
+function baseCandidate(item: FeedItem, categoryText?: string): {
   title: string;
   body: string;
   claimUrl: string;
@@ -110,7 +117,7 @@ function baseCandidate(item: FeedItem): {
   } catch {
     return null;
   }
-  const category = categorize(`${title} ${body}`);
+  const category = categorize(categoryText ?? `${title} ${body}`);
   if (!category) return null;
   return { title, body, claimUrl, category };
 }
@@ -142,13 +149,18 @@ export function extractCandidateFromFeedItem(item: FeedItem): Candidate | null {
  * Build a candidate from a feed item with a deadline found elsewhere —
  * the two-stage path: the feed snippet had no deadline, so the worker
  * fetched the linked article and extracted a deadline-labeled date from it.
- * Category/title/summary still come from the feed item itself.
+ * Title/summary still come from the feed item itself. Category comes from
+ * the snippet, or — when `categoryText` is given — from the snippet plus
+ * the head of the article (first ~3000 chars: the article's own intro, not
+ * its sidebar/related-links boilerplate, where a stray keyword could
+ * misclassify an unrelated item).
  */
 export function extractCandidateWithDeadline(
   item: FeedItem,
   deadline: string,
+  categoryText?: string,
 ): Candidate | null {
-  const base = baseCandidate(item);
+  const base = baseCandidate(item, categoryText);
   if (!base) return null;
   return finish(base, deadline);
 }
