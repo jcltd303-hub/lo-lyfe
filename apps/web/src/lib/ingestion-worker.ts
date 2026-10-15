@@ -1,4 +1,4 @@
-import { assertApprovedFetchUrl, canonicalizeClaimUrl, classifyFetchResponse, extractCandidateFromFeedItem, extractCandidateWithDeadline, htmlToText, isRobotsAllowed, parseJsonFeed, parseOfficialPage, parseRobotsTxt, parseSyndicationFeed, cosineSimilarity, textFeatureEmbedding, validateCandidate } from '@lo-lyfe/core';
+import { assertApprovedFetchUrl, canonicalizeClaimUrl, classifyFetchResponse, extractCandidateFromFeedItem, extractCandidateWithDeadline, extractDeadlineFromText, htmlToText, isRobotsAllowed, parseJsonFeed, parseOfficialPage, parseRobotsTxt, parseSyndicationFeed, cosineSimilarity, textFeatureEmbedding, validateCandidate } from '@lo-lyfe/core';
 import type { Candidate, FeedItem } from '@lo-lyfe/core';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
