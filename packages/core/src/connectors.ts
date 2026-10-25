@@ -44,26 +44,66 @@ export function parseSyndicationFeed(xml: string): FeedItem[] {
 
 export interface JsonFeedItem {
   title?: unknown;
+  name?: unknown;
   url?: unknown;
   external_url?: unknown;
   html_url?: unknown;
+  listing_url?: unknown;
   content_text?: unknown;
   summary?: unknown;
   abstract?: unknown;
   date_published?: unknown;
   publication_date?: unknown;
+  // Settlement-dataset fields (e.g. Class Action Hero's { settlements: [...] }
+  // payload): no title/description in feed shape, so the description is
+  // synthesized from the structured fields below.
+  eligibility?: unknown;
+  fund?: unknown;
+  deadline?: unknown;
+  deadlineLabel?: unknown;
+  proof_enum?: unknown;
 }
 
-/** Parse JSON Feed without trusting arbitrary fields or allowing unbounded payloads. Also accepts API-style `{ results: [...] }` payloads (e.g. Federal Register) with common field aliases. */
+function str(value: unknown): string | undefined {
+  return typeof value === 'string' && value.trim() ? value.trim() : undefined;
+}
+
+/**
+ * Build a feed description for settlement-dataset records that carry
+ * structured fields instead of prose. The wording is deliberate: it contains
+ * the catalog's category keyword ("settlement") and a labeled claim deadline,
+ * the two things candidate extraction requires, and states the proof terms
+ * plainly so a synthesized listing never oversells a documented claim as
+ * no-proof (or the reverse).
+ */
+function settlementDescription(item: JsonFeedItem): string | undefined {
+  const eligibility = str(item.eligibility);
+  if (!eligibility) return undefined;
+  const parts = [eligibility.endsWith('.') ? eligibility : `${eligibility}.`, 'Class action settlement.'];
+  const fund = str(item.fund);
+  if (fund) parts.push(`Settlement fund: ${fund}.`);
+  const deadline = str(item.deadlineLabel) ?? str(item.deadline);
+  if (deadline) parts.push(`Claim deadline: ${deadline}.`);
+  const proof = str(item.proof_enum);
+  if (proof === 'none') parts.push('No proof required to file a claim.');
+  else if (proof === 'notice_id_only') parts.push('No receipts or documents required; file with the claim ID from your settlement notice.');
+  else if (proof === 'required') parts.push('Documentation is required to file a claim.');
+  return parts.join(' ');
+}
+
+/** Parse JSON Feed without trusting arbitrary fields or allowing unbounded payloads. Also accepts API-style `{ results: [...] }` payloads (e.g. Federal Register) and settlement-dataset `{ settlements: [...] }` payloads (e.g. Class Action Hero) with common field aliases. */
 export function parseJsonFeed(raw: string): FeedItem[] {
   if (raw.length > 2_000_000) throw new Error('Feed exceeds size limit');
-  const parsed = JSON.parse(raw) as { items?: JsonFeedItem[]; results?: JsonFeedItem[] };
-  const entries = Array.isArray(parsed.items) ? parsed.items : parsed.results;
+  const parsed = JSON.parse(raw) as { items?: JsonFeedItem[]; results?: JsonFeedItem[]; settlements?: JsonFeedItem[] };
+  const entries = Array.isArray(parsed.items) ? parsed.items : Array.isArray(parsed.results) ? parsed.results : parsed.settlements;
   if (!Array.isArray(entries)) throw new Error('JSON feed items are required');
   return entries.slice(0, 250).map(item => ({
-    title: typeof item.title === 'string' ? item.title.trim() : undefined,
-    link: typeof item.external_url === 'string' ? item.external_url : typeof item.url === 'string' ? item.url : typeof item.html_url === 'string' ? item.html_url : undefined,
-    description: typeof item.content_text === 'string' ? item.content_text : typeof item.summary === 'string' ? item.summary : typeof item.abstract === 'string' ? item.abstract : undefined,
+    title: typeof item.title === 'string' ? item.title.trim() : typeof item.name === 'string' ? item.name.trim() : undefined,
+    // listing_url (a dataset's own per-record page) outranks the record's
+    // official-site url: the claim-link host gate approves the dataset host,
+    // not the hundreds of administrator domains the records point at.
+    link: typeof item.external_url === 'string' ? item.external_url : typeof item.listing_url === 'string' ? item.listing_url : typeof item.url === 'string' ? item.url : typeof item.html_url === 'string' ? item.html_url : undefined,
+    description: typeof item.content_text === 'string' ? item.content_text : typeof item.summary === 'string' ? item.summary : typeof item.abstract === 'string' ? item.abstract : settlementDescription(item),
     publishedAt: typeof item.date_published === 'string' ? item.date_published : typeof item.publication_date === 'string' ? item.publication_date : undefined,
   }));
 }
